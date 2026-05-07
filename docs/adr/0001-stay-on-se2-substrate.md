@@ -25,7 +25,7 @@ popup AI friend, Socratic checks — is roughly **60% of the v0.1 build** and is
 React-native (we're already invested in Next.js for the SE-2 ecosystem and the team's
 familiarity).
 
-Working directory `learning-with-ai-speedrunethereum/` is already an SE-2 fork
+Working directory `sre-learning-lab/` is already an SE-2 fork
 (Next.js + React + wagmi/viem + hardhat workspace).
 
 ## Decision

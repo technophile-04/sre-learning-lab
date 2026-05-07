@@ -1,6 +1,7 @@
-# learning-with-ai-speedrunethereum — context
+# sre-learning-lab — context
 
 A scaffold-eth-2 fork that hosts the v0.1 testbed for the AI-assisted solidity learning experience.
+Lives at `~/Desktop/github/sre-learning-lab/` locally, `technophile-04/sre-learning-lab` on GitHub.
 The product hypothesis being tested here is **not** "AI chatbot wrapped around a tutorial" —
 that already exists in the SRE site. This product tests three orthogonal bets, baked together,
 on a single concept (ERC-20) curated from three canonical sources.
@@ -15,7 +16,7 @@ of the next session.
 **To verify current state in ~60 seconds:**
 
 ```bash
-cd ~/Desktop/github/learning-with-ai-speedrunethereum
+cd ~/Desktop/github/sre-learning-lab
 yarn workspace @se-2/nextjs dev
 ```
 
