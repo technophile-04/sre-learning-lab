@@ -101,17 +101,35 @@ These are the only sources curated for v0.1. No new curriculum is being authored
 ### decomposition unit
 **Concept-level atoms with function-level drilldown.** ERC-20 is presented as a small set
 of conceptual atoms; each atom can be zoomed into a function-level view when the learner
-wants to see the code. Atoms (proposed):
+wants to see the code.
 
-1. **Balance ledger** — the contract is a database of "who owns how much"; transfers
-   atomically update two rows.
-2. **Direct authorization** (`transfer`) — you can move your own tokens.
-3. **Delegated authorization** (`approve` + `transferFrom`) — grant a third party
-   permission to pull from you, capped and revocable. The Uniswap-bridge atom; also the
-   source of every infinite-approval exploit.
-4. **Supply management** (`mint` / `burn`) — where tokens come from / go to.
-5. **Audit trail** (events) — `Transfer` / `Approval` logs are how block explorers and
-   indexers reconstruct history.
+**Depth tiers per atom.** Each atom carries a depth tier from Jeffrey Scholz's
+*explain → justify → apply* progression (Carlos × Jeffrey/RareSkills meet, 2026-05-08;
+recap in vault at `2. Areas/sandgarden/updates/2026-05-08-carlos-jeffrey-ai-education-meet.md`):
+*explain* = the learner can follow what's happening; *justify* = they can defend why it's done
+this way; *apply* = they integrate it with other knowledge unprompted. Tiers give the
+dependency edges semantic weight beyond "B requires A" — they encode cognitive depth, and
+the atom graph's edges should eventually render as tier transitions (E→J, J→A) rather than
+flat prereq arrows. The AI friend's question gradient (v0.2) follows the same tiers: ask
+explain-tier checkpoints first, escalate only after the learner answers solidly.
+
+Atoms (proposed; tiers in parens, refine as scenes land):
+
+1. **Balance ledger** *(explain)* — the contract is a database of "who owns how much";
+   transfers atomically update two rows.
+2. **Direct authorization** (`transfer`) *(explain)* — you can move your own tokens.
+3. **Delegated authorization** (`approve` + `transferFrom`) *(justify)* — grant a third
+   party permission to pull from you, capped and revocable. The Uniswap-bridge atom; also
+   the source of every infinite-approval exploit. Justify-tier because the learner has to
+   argue *why* the dance exists at all rather than just transfer-to-an-intermediary.
+4. **Supply management** (`mint` / `burn`) *(justify)* — where tokens come from / go to;
+   why caps exist, why minting dilutes everyone, why burn isn't transfer-to-zero.
+5. **Audit trail** (events) *(justify)* — `Transfer` / `Approval` logs are how block
+   explorers and indexers reconstruct history; why have events at all rather than reading
+   storage.
+
+Synthesis nodes (Uniswap, lending) are *apply* tier — the learner integrates multiple
+atoms unprompted to predict behaviour. Visible-but-locked on the atom graph in v0.1.
 
 Storage-level decomposition (mappings, slots, packing) is intentionally **not** the spine —
 it's a follow-on lens for learners who want to look under the floor.
@@ -190,7 +208,10 @@ server route in the Next.js app; client never holds the OpenRouter key.
   it" condition for the atom is met (e.g. for balance ledger: a successful transfer that
   decremented sender and incremented recipient), and (b) the learner has been idle ~30s —
   the friend surfaces ONE Socratic question. The learner can answer or dismiss. Answering
-  is what unlocks the next atom on the graph.
+  is what unlocks the next atom on the graph. The v0.1 hardcoded question is *the
+  explain-tier checkpoint* for that atom (see depth tiers under `### decomposition unit`);
+  v0.2 generates the question dynamically and walks the explain → justify → apply gradient
+  based on prior answers.
 - The friend's tone is peer-to-peer, not teacher-to-student. Casual, honest, short. Not
   hype. Not "great question!" cheerleading. (See the sandgarden writing style for voice.)
 - Adaptation: the friend reads the learner's prior answers and code edits within the
@@ -321,6 +342,33 @@ Update this section every time a meaningful chunk lands or a decision changes.
       Type-check clean. Still TODO this week: atom-completion check (the canonical
       "you've got it" trigger that unlocks the next atom on the graph), and live
       verification at `yarn dev`.
+- [x] **2026-05-07 (evening) — friend route handler shipped + repo pushed.** First chunk
+      of the AI behavior layer landed at `packages/nextjs/app/api/friend/route.ts`. POST
+      endpoint, accepts `{ messages, context }`, streams via the Vercel AI SDK
+      (`streamText` + `toUIMessageStreamResponse`) against OpenRouter's OpenAI-compatible
+      endpoint. Scene context (atomId, source, balances, recentTransfers) bakes into the
+      system prompt so the friend has awareness without tool calls in v0.1. Default model
+      `anthropic/claude-sonnet-4.5`, env override via `OPENROUTER_MODEL`. Two stack notes:
+      1. `createOpenAI({ baseURL: "https://openrouter.ai/api/v1" })` for the wiring; had
+         to force `.chat(modelId)` because AI SDK v6 defaults to the OpenAI Responses API
+         and OpenRouter only speaks chat-completions.
+      2. `convertToModelMessages` is async in v6 (returns `Promise<ModelMessage[]>`); the
+         canonical Next.js App Router example in `node_modules/ai/docs/` shows the
+         `await`. Type-check caught the regression — exactly why the bundled-docs
+         discipline matters.
+      Repo also pushed to GitHub as `technophile-04/sre-learning-lab` (public). Local
+      folder renamed from `learning-with-ai-speedrunethereum/` to match. Three references
+      chased down (this file's title + Resume here `cd` line, ADR-0001 working-dir note).
+- [x] **2026-05-08 — Carlos × Jeffrey/RareSkills meet sharpens the framing.**
+      Independent arrival at "AI's value-add in education is question curation, not
+      explanation" validates the v0.1 Socratic bet. Folded Jeffrey's *explain → justify →
+      apply* progression into `### decomposition unit`; the 5 atoms now carry depth tiers,
+      and the AI friend's v0.1 hardcoded question is reframed as the *explain-tier
+      checkpoint* for balance-ledger (v0.2 walks the gradient dynamically). No
+      build-sequence change — week 2 still ships balance-ledger end-to-end. Strategic
+      reads (90/10 AI-to-human split for v0.2+, June Uniswap V3 boot camp as a deployment
+      surface, foundational-over-trending validation for the ERC-20 testbed pick) live
+      in vault at `2. Areas/sandgarden/updates/2026-05-08-carlos-jeffrey-ai-education-meet.md`.
 - [ ] **week 3 — graph + Socratic** — atom graph homepage; one Socratic question; vercel deploy
 </content>
 </invoke>
