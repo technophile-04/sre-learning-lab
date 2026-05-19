@@ -13,12 +13,15 @@
 // State model: source, compile/deploy status, holders+balances, recent transfers, the
 // ai-friend popup. All useState, no external store. One useEffect for auto-compile
 // debounce, one for refreshing balances after a tx.
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DM_Mono, Fraunces } from "next/font/google";
 import Link from "next/link";
+import { useChat } from "@ai-sdk/react";
+import { EditorView, GutterMarker, type ViewUpdate, gutter } from "@codemirror/view";
 import { solidity } from "@replit/codemirror-lang-solidity";
 import { githubLight } from "@uiw/codemirror-theme-github";
 import CodeMirror from "@uiw/react-codemirror";
+import { DefaultChatTransport, lastAssistantMessageIsCompleteWithToolCalls } from "ai";
 import { blo } from "blo";
 import { PREFUNDED_ACCOUNTS, createMemoryClient } from "tevm";
 import type { Abi } from "viem";
@@ -74,6 +77,51 @@ type Transfer = {
   at: number;
 };
 
+// ── the teacher's manicule ☞ ───────────────────────────────────────────────
+// A pointing hand in the editor gutter — the printed-margin device scribes
+// used for centuries to mean "attention, this line." It rides a real
+// CodeMirror gutter so it tracks the cursor line natively and scrolls with
+// the code. This is the teacher's body; the panel below is its voice.
+class ManiculeMarker extends GutterMarker {
+  toDOM() {
+    const s = document.createElement("span");
+    s.textContent = "☞";
+    s.className = "cm-manicule";
+    return s;
+  }
+}
+const manicule = new ManiculeMarker();
+const teacherGutter = gutter({
+  class: "cm-teacher-gutter",
+  lineMarkerChange: u => u.selectionSet,
+  lineMarker(view, line) {
+    const headLine = view.state.doc.lineAt(view.state.selection.main.head).number;
+    const thisLine = view.state.doc.lineAt(line.from).number;
+    return thisLine === headLine ? manicule : null;
+  },
+  initialSpacer: () => manicule,
+});
+
+const SOURCE_LABEL = "openzeppelin · ethereum.org · speedrun-ethereum";
+// sentinel first turn — makes the teacher speak first (greet + explain line 1
+// per the system prompt). Hidden from the transcript.
+const KICKOFF = "⟪scene-open⟫";
+
+type TutorContext = {
+  atomId: string;
+  source: string;
+  balances: Record<string, string>;
+  recentTransfers: Array<{ from: string; to: string; amount: string }>;
+  cursorLine: { number: number; text: string };
+};
+
+function messageText(m: { parts: Array<{ type: string }> }): string {
+  return (m.parts as Array<{ type: string; text?: string }>)
+    .filter(p => p.type === "text")
+    .map(p => p.text ?? "")
+    .join("");
+}
+
 export default function BalanceLedgerScene() {
   // ── core state ─────────────────────────────────────────────────────────────
   const [source, setSource] = useState(STARTER_SOURCE);
@@ -90,8 +138,29 @@ export default function BalanceLedgerScene() {
   const [composerTo, setComposerTo] = useState<string>("B");
   const [composerAmount, setComposerAmount] = useState<string>("100");
 
-  // ai friend
-  const [friendOpen, setFriendOpen] = useState(false);
+  // the line the cursor sits on — the teacher points here
+  const [cursor, setCursor] = useState<{ number: number; text: string }>(() => ({
+    number: 1,
+    text: STARTER_SOURCE.split("\n")[0],
+  }));
+
+  const onEditorUpdate = useCallback((vu: ViewUpdate) => {
+    if (!vu.selectionSet && !vu.docChanged) return;
+    const head = vu.state.selection.main.head;
+    const line = vu.state.doc.lineAt(head);
+    setCursor(c => (c.number === line.number && c.text === line.text ? c : { number: line.number, text: line.text }));
+  }, []);
+
+  // the teacher's hand: move the cursor (and the ☞) to a line it points at.
+  // Everything else re-anchors off the selection via onEditorUpdate.
+  const editorViewRef = useRef<EditorView | null>(null);
+  const handlePointLine = useCallback((target: number) => {
+    const view = editorViewRef.current;
+    if (!view) return;
+    const clamped = Math.max(1, Math.min(target, view.state.doc.lines));
+    const line = view.state.doc.line(clamped);
+    view.dispatch({ selection: { anchor: line.from }, scrollIntoView: true });
+  }, []);
 
   // working flag (deploy / transfer)
   const [busy, setBusy] = useState(false);
@@ -217,6 +286,20 @@ export default function BalanceLedgerScene() {
     return { x1, y1, x2, y2, cx, cy };
   }, [activeArrow]);
 
+  // context handed to the teacher on every turn — what the learner sees now
+  const teacherContext = useMemo<TutorContext>(
+    () => ({
+      atomId: "balance-ledger",
+      source: SOURCE_LABEL,
+      balances: Object.fromEntries(HOLDER_LABELS.map(l => [l, balances[l].toString()])),
+      recentTransfers: transfers
+        .slice(0, 5)
+        .map(t => ({ from: t.fromLabel, to: t.toLabel, amount: t.amount.toString() })),
+      cursorLine: cursor,
+    }),
+    [balances, transfers, cursor],
+  );
+
   // ── render ─────────────────────────────────────────────────────────────────
   return (
     <>
@@ -233,6 +316,18 @@ export default function BalanceLedgerScene() {
         }
         .balance-ledger-scene { font-family: var(--font-display); }
         .mono { font-family: var(--font-mono); font-feature-settings: "tnum" 1; }
+        .cm-teacher-gutter { min-width: 16px; }
+        .cm-manicule {
+          color: var(--vermilion);
+          font-size: 12px;
+          line-height: 1;
+          padding-left: 2px;
+          animation: maniculeIn 260ms ease-out;
+        }
+        @keyframes maniculeIn {
+          from { opacity: 0; transform: translateX(-3px); }
+          to   { opacity: 1; transform: translateX(0); }
+        }
         .paper-grain {
           background-image:
             radial-gradient(rgba(20,24,31,0.025) 1px, transparent 1px);
@@ -355,7 +450,11 @@ export default function BalanceLedgerScene() {
                 <CodeMirror
                   value={source}
                   onChange={setSource}
-                  extensions={[solidity]}
+                  onUpdate={onEditorUpdate}
+                  onCreateEditor={view => {
+                    editorViewRef.current = view;
+                  }}
+                  extensions={[solidity, teacherGutter]}
                   theme={githubLight}
                   height="540px"
                   basicSetup={{
@@ -419,6 +518,7 @@ export default function BalanceLedgerScene() {
                   </span>
                 )}
               </div>
+              <MarginTutor context={teacherContext} onPointLine={handlePointLine} />
             </div>
 
             {/* ── STATE PANE ──────────────────────────────────────────── */}
@@ -623,9 +723,6 @@ export default function BalanceLedgerScene() {
             </div>
           </div>
         </section>
-
-        {/* ── ai friend (corner inkwell) ───────────────────────────────── */}
-        <FriendInkwell open={friendOpen} onToggle={() => setFriendOpen(v => !v)} />
       </main>
     </>
   );
@@ -696,67 +793,162 @@ function SelectPill({
   );
 }
 
-function FriendInkwell({ open, onToggle }: { open: boolean; onToggle: () => void }) {
+// MarginTutor — the teacher's voice. A scholar's gloss in the margin of the
+// code: it speaks first on line 1, follows the cursor (the ☞ in the gutter
+// moves with it), and answers anchored to whatever line you're on. Socratic
+// by system prompt: it points and asks, it doesn't lecture.
+function MarginTutor({ context, onPointLine }: { context: TutorContext; onPointLine: (line: number) => void }) {
+  const ctxRef = useRef(context);
+  useEffect(() => {
+    ctxRef.current = context;
+  }, [context]);
+  const onPointRef = useRef(onPointLine);
+  useEffect(() => {
+    onPointRef.current = onPointLine;
+  }, [onPointLine]);
+
+  const transport = useMemo(() => new DefaultChatTransport({ api: "/api/friend" }), []);
+  // once the client answers a pointAtLine call, auto-resume so the teacher
+  // keeps talking instead of hanging on the unanswered tool call.
+  const { messages, sendMessage, status, error, addToolResult } = useChat({
+    transport,
+    sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
+  });
+
+  // the teacher's pointing hand — when it calls pointAtLine, move the cursor
+  // there (gutter + panel re-anchor off selection) and let it keep talking.
+  const handledTools = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    for (const m of messages) {
+      if (m.role !== "assistant") continue;
+      for (const part of m.parts as Array<{ type: string; state?: string; toolCallId?: string; input?: unknown }>) {
+        if (part.type !== "tool-pointAtLine" || part.state !== "input-available") continue;
+        const id = part.toolCallId;
+        if (!id || handledTools.current.has(id)) continue;
+        handledTools.current.add(id);
+        const line = (part.input as { line?: number } | undefined)?.line;
+        if (typeof line === "number") onPointRef.current(line);
+        void addToolResult({ tool: "pointAtLine", toolCallId: id, output: { ok: true } });
+      }
+    }
+  }, [messages, addToolResult]);
+
+  const [draft, setDraft] = useState("");
+  const bodyRef = useRef<HTMLDivElement | null>(null);
+  const startedRef = useRef(false);
+
+  // teacher speaks first — greet + explain line 1 (system prompt drives this)
+  useEffect(() => {
+    if (startedRef.current) return;
+    startedRef.current = true;
+    sendMessage({ text: KICKOFF }, { body: { context: ctxRef.current } });
+  }, [sendMessage]);
+
+  const busy = status === "submitted" || status === "streaming";
+
+  useEffect(() => {
+    bodyRef.current?.scrollTo({ top: bodyRef.current.scrollHeight, behavior: "smooth" });
+  }, [messages, status]);
+
+  function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const text = draft.trim();
+    if (!text || busy) return;
+    setDraft("");
+    sendMessage({ text }, { body: { context: ctxRef.current } });
+  }
+
+  const visible = messages.filter(m => !(m.role === "user" && messageText(m) === KICKOFF));
+  const waitingFirst = visible.length === 0;
+
   return (
-    <div className="fixed bottom-8 right-8 z-50">
-      {open && (
-        <div
-          className="pop-in mb-3 w-[320px] border"
-          style={{
-            background: "#FBFAF6",
-            borderColor: "var(--rule)",
-            boxShadow: "0 16px 40px -12px rgba(20,24,31,0.18)",
-          }}
-        >
-          <div
-            className="flex items-baseline justify-between border-b px-5 py-3"
-            style={{ borderColor: "var(--rule)" }}
-          >
-            <span style={{ fontStyle: "italic", fontSize: 18 }}>the friend</span>
-            <span className="mono text-[9px] uppercase tracking-[0.2em]" style={{ color: "var(--gold)" }}>
-              v0.1 shell
-            </span>
-          </div>
-          <div className="space-y-3 px-5 py-4 text-[13px] leading-relaxed">
-            <p style={{ color: "var(--ink)" }}>
-              <span style={{ fontStyle: "italic" }}>hey.</span> you&apos;re looking at the ledger atom. mutate the
-              contract on the left and watch the right react.
-            </p>
-            <p style={{ color: "var(--ink-soft)" }}>
-              ask me when something doesn&apos;t make sense. (full chat plugs in next week — for now i just nod along.)
-            </p>
-          </div>
-          <div className="border-t px-5 py-3" style={{ borderColor: "var(--rule)" }}>
-            <input
-              disabled
-              placeholder="hold for v0.2…"
-              className="mono w-full bg-transparent text-[12px] focus:outline-none"
-              style={{ color: "var(--ink-soft)" }}
-            />
-          </div>
-        </div>
-      )}
-      <button
-        onClick={onToggle}
-        className="inkwell-bob group flex h-14 w-14 items-center justify-center transition-transform hover:scale-105"
-        style={{
-          background: "var(--ink)",
-          color: "var(--paper)",
-          borderRadius: 2,
-        }}
-        aria-label={open ? "close friend" : "open friend"}
-      >
-        <span
-          style={{
-            fontFamily: "var(--font-display)",
-            fontStyle: "italic",
-            fontSize: 22,
-            lineHeight: 1,
-          }}
-        >
-          {open ? "×" : "?"}
+    <div
+      className="mt-6 border"
+      style={{
+        borderColor: "var(--rule)",
+        borderLeft: "2px solid var(--vermilion)",
+        background: "#FBFAF6",
+      }}
+    >
+      {/* header — who, and which line they're pointing at */}
+      <div className="flex items-baseline justify-between border-b px-5 py-3" style={{ borderColor: "var(--rule)" }}>
+        <span className="flex items-baseline gap-2">
+          <span style={{ color: "var(--vermilion)", fontSize: 15 }}>☞</span>
+          <span style={{ fontStyle: "italic", fontSize: 18 }}>the marginalian</span>
+          <span className="mono text-[10px]" style={{ color: "var(--ink-soft)" }}>
+            · line {context.cursorLine.number}
+          </span>
         </span>
-      </button>
+        <span className="mono text-[9px] uppercase tracking-[0.2em]" style={{ color: "var(--gold)" }}>
+          {busy ? "thinking…" : "socratic"}
+        </span>
+      </div>
+
+      {/* the line under the cursor — shared point of attention (deixis) */}
+      <div
+        className="mono truncate border-b px-5 py-2 text-[11px]"
+        style={{ borderColor: "var(--rule-soft)", color: "var(--ink-soft)" }}
+      >
+        <span style={{ color: "var(--gold)" }}>{String(context.cursorLine.number).padStart(2, "0")}</span>{" "}
+        {context.cursorLine.text.trim() || "·"}
+      </div>
+
+      {/* dialogue */}
+      <div ref={bodyRef} className="max-h-[260px] space-y-4 overflow-y-auto px-5 py-4">
+        {waitingFirst && (
+          <p className="text-[13px]" style={{ color: "var(--ink-soft)", fontStyle: "italic" }}>
+            the teacher is turning to line 1…
+          </p>
+        )}
+        {visible.map(m => {
+          const text = messageText(m);
+          if (m.role === "user") {
+            return (
+              <div key={m.id} className="text-[13px]">
+                <span className="mono mr-2 text-[9px] uppercase tracking-[0.2em]" style={{ color: "var(--gold)" }}>
+                  you
+                </span>
+                <span style={{ color: "var(--ink-soft)" }}>{text}</span>
+              </div>
+            );
+          }
+          return (
+            <p key={m.id} className="text-[14px] leading-relaxed" style={{ color: "var(--ink)" }}>
+              {text}
+              {busy && m === visible[visible.length - 1] && <span style={{ color: "var(--vermilion)" }}> ▍</span>}
+            </p>
+          );
+        })}
+        {error && (
+          <p className="text-[12px]" style={{ color: "var(--vermilion)", fontStyle: "italic" }}>
+            the teacher is unreachable — is OPENROUTER_API_KEY set in .env.local?
+          </p>
+        )}
+      </div>
+
+      {/* ask */}
+      <form
+        onSubmit={onSubmit}
+        className="flex items-center gap-3 border-t px-5 py-3"
+        style={{ borderColor: "var(--rule)" }}
+      >
+        <input
+          value={draft}
+          onChange={e => setDraft(e.target.value)}
+          placeholder={`ask about line ${context.cursorLine.number}…`}
+          className="mono w-full bg-transparent text-[12px] focus:outline-none"
+          style={{ color: "var(--ink)" }}
+        />
+        <button
+          type="submit"
+          disabled={busy || !draft.trim()}
+          className="mono text-[13px] transition-opacity disabled:opacity-25"
+          style={{ color: "var(--vermilion)" }}
+          aria-label="ask the teacher"
+        >
+          →
+        </button>
+      </form>
     </div>
   );
 }

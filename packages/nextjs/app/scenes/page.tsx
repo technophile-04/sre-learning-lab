@@ -2,16 +2,35 @@
 
 // atlas — the frontispiece plate. The "zoom out" view of the entire ERC-20 atom set.
 //
-// Rendered as a single composed artifact, not a webapp screen: a printed scholarly
-// diagram with hand-drawn-feeling edges, italic edge labels ("extends", "implies",
-// "leads to —"), Roman-numeral marginalia, and a destination node (Uniswap) styled
-// as an illuminated drop-cap to distinguish it from the atoms.
+// Rendered as a printed scholarly diagram, NOT a webapp screen: cream paper, ink,
+// vermilion accent, italic edge labels ("extends", "implies", "leads to —"),
+// Roman-numeral marginalia, and a destination node (Uniswap) styled as an
+// illuminated drop-cap.
 //
-// Layout coordinates are hard-coded (not force-directed) — this is curriculum, not a
-// dataset. Hardcoded positions read as designed; computed positions read as generic.
-import { useState } from "react";
+// v0.3 migration: the graph is now React Flow instead of a hand-drawn SVG. The
+// topology (ATOMS/EDGES) was already clean data and is unchanged. What's gone is
+// the hand-tuned per-edge Bezier math and the manual arrowhead trig — React Flow
+// owns edge routing, attachment, and state-driven rendering now. Node positions
+// stay curated (the old design note's "computed positions read as generic" call
+// is honoured): React Flow lays out the *edges*, not the *atoms*. Every default
+// React Flow surface (controls, minimap, dotted background, node chrome, handles,
+// selection) is suppressed so this reads as a plate, not a flowchart tool.
+import { createContext, useContext, useMemo, useState } from "react";
 import { DM_Mono, Fraunces } from "next/font/google";
 import Link from "next/link";
+import {
+  BaseEdge,
+  EdgeLabelRenderer,
+  type EdgeProps,
+  Handle,
+  type NodeProps,
+  Position,
+  type Edge as RFEdge,
+  type Node as RFNode,
+  ReactFlow,
+  ReactFlowProvider,
+} from "@xyflow/react";
+import "@xyflow/react/dist/style.css";
 
 const fraunces = Fraunces({
   subsets: ["latin"],
@@ -27,6 +46,7 @@ const dmMono = DM_Mono({
 });
 
 type AtomStatus = "completed" | "available" | "locked";
+type AtomTier = "explain" | "justify" | "apply";
 
 type Atom = {
   id: string;
@@ -36,8 +56,10 @@ type Atom = {
   x: number;
   y: number;
   status: AtomStatus;
+  /** depth tier — explain → justify → apply (Jeffrey Scholz). Carried in data so
+   *  the renderer can reflect it; v0.3 keeps the visual treatment minimal. */
+  tier: AtomTier;
   href: string;
-  romanOffset?: { dx: number; dy: number };
 };
 
 const ATOMS: Atom[] = [
@@ -46,55 +68,55 @@ const ATOMS: Atom[] = [
     roman: "i.",
     label: "balance ledger",
     caption: "the contract is a database of who owns how much.",
-    x: 220,
-    y: 200,
+    x: 240,
+    y: 170,
     status: "completed",
+    tier: "explain",
     href: "/scenes/balance-ledger",
-    romanOffset: { dx: -40, dy: -34 },
   },
   {
     id: "direct-authorization",
     roman: "ii.",
     label: "direct authorization",
     caption: "move tokens you own — and only those.",
-    x: 480,
-    y: 200,
+    x: 560,
+    y: 170,
     status: "available",
+    tier: "explain",
     href: "/scenes/direct-authorization",
-    romanOffset: { dx: -38, dy: -34 },
   },
   {
     id: "delegated-authorization",
     roman: "iii.",
     label: "delegated authorization",
     caption: "grant another address permission to spend.",
-    x: 740,
-    y: 200,
+    x: 880,
+    y: 170,
     status: "available",
+    tier: "justify",
     href: "/scenes/delegated-authorization",
-    romanOffset: { dx: -42, dy: -34 },
   },
   {
     id: "supply-management",
     roman: "iv.",
     label: "supply management",
     caption: "where tokens come from. where they go.",
-    x: 220,
-    y: 420,
+    x: 320,
+    y: 620,
     status: "locked",
+    tier: "justify",
     href: "#",
-    romanOffset: { dx: -42, dy: -34 },
   },
   {
     id: "audit-trail",
     roman: "v.",
     label: "audit trail",
     caption: "every move emits a log. the ledger remembers.",
-    x: 480,
-    y: 420,
+    x: 680,
+    y: 620,
     status: "locked",
+    tier: "justify",
     href: "#",
-    romanOffset: { dx: -38, dy: -34 },
   },
 ];
 
@@ -103,83 +125,418 @@ const SYNTHESIS = {
   letter: "U",
   label: "uniswap",
   caption: "a market made of these atoms.",
-  x: 980,
-  y: 310,
+  x: 1140,
+  y: 340,
 };
 
-type Edge = {
+type EdgeKind = "extends" | "implies" | "leads-to";
+
+type AtlasEdge = {
   from: string;
   to: string;
-  kind: "extends" | "implies" | "leads-to";
+  kind: EdgeKind;
   label: string;
-  /** offset for label so it doesn't sit ON the line */
-  labelOffset: { dx: number; dy: number };
-  /** bend factor — controls Bezier control point distance from midpoint */
+  /** perpendicular curve control — the designer's bow, kept in data the same
+   *  way curated node positions are. Positive bows one way, negative the other. */
   bend?: number;
+  /** nudge the label off the line so it doesn't collide with markers/captions. */
+  labelOffset?: { dx: number; dy: number };
 };
 
-const EDGES: Edge[] = [
+const EDGES: AtlasEdge[] = [
   {
     from: "balance-ledger",
     to: "direct-authorization",
     kind: "extends",
     label: "extends",
-    labelOffset: { dx: 0, dy: -14 },
+    labelOffset: { dx: 0, dy: -16 },
   },
   {
     from: "direct-authorization",
     to: "delegated-authorization",
     kind: "extends",
     label: "extends",
-    labelOffset: { dx: 0, dy: -14 },
+    labelOffset: { dx: 0, dy: -16 },
   },
   {
     from: "balance-ledger",
     to: "supply-management",
     kind: "extends",
     label: "extends",
-    labelOffset: { dx: -50, dy: 6 },
+    bend: -8,
+    labelOffset: { dx: -34, dy: 0 },
   },
   {
     from: "balance-ledger",
     to: "audit-trail",
     kind: "implies",
     label: "implies",
-    labelOffset: { dx: 6, dy: 0 },
-    bend: 24,
+    bend: 18,
+    labelOffset: { dx: -30, dy: -10 },
   },
   {
     from: "direct-authorization",
     to: "audit-trail",
     kind: "implies",
     label: "implies",
-    labelOffset: { dx: -38, dy: 6 },
+    bend: -14,
+    labelOffset: { dx: 32, dy: 0 },
   },
   {
     from: "delegated-authorization",
     to: "uniswap",
     kind: "leads-to",
     label: "leads to —",
-    labelOffset: { dx: 6, dy: -10 },
-    bend: -30,
+    bend: -44,
+    labelOffset: { dx: 0, dy: -16 },
   },
 ];
 
+// ── shared hover state ────────────────────────────────────────────────────
+// One source of truth for "what is the cursor near", consumed by both the
+// nodes (vermilion name) and the edges (lit line). Context keeps the React
+// Flow nodes/edges arrays stable instead of rebuilding them on every hover.
+const HoverContext = createContext<{
+  hoveredId: string | null;
+  setHovered: (id: string | null) => void;
+}>({ hoveredId: null, setHovered: () => {} });
+
 const ATOM_RADIUS = 28;
 const SYNTHESIS_HALF = 52;
+// node box dimensions — fixed so React Flow's measurement is stable and the
+// curated coordinate can be mapped to the *marker centre* (not the box corner).
+const ATOM_BOX_W = 240;
+const SYN_BOX_W = 220;
 
-const CANVAS_W = 1180;
-const CANVAS_H = 600;
+// ── atom node ─────────────────────────────────────────────────────────────
+// A real, measured box: marker on top in normal flow, caption beneath (so
+// fitView accounts for it), roman numeral as absolute marginalia. The handle
+// is pinned to the marker's centre — React Flow reads the handle's actual
+// measured position, so edges attach at the curated coordinate exactly.
+function AtomNode({ data }: NodeProps<RFNode<{ atom: Atom }>>) {
+  const { atom } = data;
+  const { hoveredId, setHovered } = useContext(HoverContext);
+  const locked = atom.status === "locked";
+
+  const body = (
+    <div
+      className={`atom-box ${locked ? "locked" : ""}`}
+      style={{ width: ATOM_BOX_W }}
+      onMouseEnter={() => setHovered(atom.id)}
+      onMouseLeave={() => setHovered(null)}
+    >
+      <span className="atom-roman mono knockout">{atom.roman}</span>
+
+      <div className="atom-marker" style={{ width: ATOM_RADIUS * 2, height: ATOM_RADIUS * 2 }}>
+        <svg
+          width={ATOM_RADIUS * 2}
+          height={ATOM_RADIUS * 2}
+          viewBox={`0 0 ${ATOM_RADIUS * 2} ${ATOM_RADIUS * 2}`}
+          style={{ display: "block", overflow: "visible" }}
+        >
+          <circle
+            cx={ATOM_RADIUS}
+            cy={ATOM_RADIUS}
+            r={ATOM_RADIUS - 2}
+            fill="var(--paper)"
+            stroke="var(--ink)"
+            strokeWidth={atom.status === "completed" ? 1.4 : 1}
+            strokeDasharray={locked ? "2 3" : undefined}
+          />
+          {atom.status === "completed" && (
+            <g>
+              <circle cx={ATOM_RADIUS} cy={ATOM_RADIUS} r="9" fill="var(--vermilion)" />
+              <path
+                d={`M ${ATOM_RADIUS - 4} ${ATOM_RADIUS} L ${ATOM_RADIUS + 4} ${ATOM_RADIUS} M ${ATOM_RADIUS} ${ATOM_RADIUS - 4} L ${ATOM_RADIUS} ${ATOM_RADIUS + 4}`}
+                stroke="var(--paper)"
+                strokeWidth="1.4"
+                strokeLinecap="round"
+              />
+            </g>
+          )}
+          {atom.status === "available" && <circle cx={ATOM_RADIUS} cy={ATOM_RADIUS} r="4" fill="var(--ink)" />}
+        </svg>
+      </div>
+
+      <div className="atom-text">
+        <div className={`atom-name knockout ${hoveredId === atom.id ? "lit" : ""}`}>{atom.label}</div>
+        <div className="atom-caption mono knockout">{atom.caption}</div>
+        {locked && <div className="atom-locked mono knockout">locked — completes after i</div>}
+      </div>
+
+      {/* handles — never user-visible. "c" sits on the marker centre (lateral
+          edges). "s" sits below the whole card so downward edges leave from
+          beneath the caption and stay in the clean inter-row gap. */}
+      <Handle
+        id="c"
+        type="source"
+        position={Position.Top}
+        className="atlas-handle"
+        isConnectable={false}
+        style={{ top: ATOM_RADIUS, left: "50%" }}
+      />
+      <Handle
+        id="c"
+        type="target"
+        position={Position.Top}
+        className="atlas-handle"
+        isConnectable={false}
+        style={{ top: ATOM_RADIUS, left: "50%" }}
+      />
+      <Handle
+        id="s"
+        type="source"
+        position={Position.Bottom}
+        className="atlas-handle"
+        isConnectable={false}
+        style={{ top: "100%", left: "50%" }}
+      />
+    </div>
+  );
+
+  return locked ? (
+    <div className="atlas-link locked">{body}</div>
+  ) : (
+    <Link href={atom.href} className="atlas-link" draggable={false}>
+      {body}
+    </Link>
+  );
+}
+
+// ── synthesis node — the U drop-cap monument ──────────────────────────────
+function SynthesisNode() {
+  return (
+    <div className="syn-box" style={{ width: SYN_BOX_W }}>
+      <div className="syn-frame" style={{ width: SYNTHESIS_HALF * 2, height: SYNTHESIS_HALF * 2 }}>
+        <span className="syn-frame-outer" />
+        <span className="syn-letter">U</span>
+      </div>
+      <div className="syn-text">
+        <div className="syn-kicker mono knockout">DESTINATION</div>
+        <div className="syn-name knockout">{SYNTHESIS.label}</div>
+        <div className="syn-caption knockout">{SYNTHESIS.caption}</div>
+      </div>
+      <Handle
+        id="c"
+        type="target"
+        position={Position.Top}
+        className="atlas-handle"
+        isConnectable={false}
+        style={{ top: SYNTHESIS_HALF, left: "50%" }}
+      />
+      <Handle
+        id="c"
+        type="source"
+        position={Position.Top}
+        className="atlas-handle"
+        isConnectable={false}
+        style={{ top: SYNTHESIS_HALF, left: "50%" }}
+      />
+    </div>
+  );
+}
+
+// ── plate edge ────────────────────────────────────────────────────────────
+// Replaces the hand-tuned quadratic + manual Arrowhead() trig. React Flow
+// gives us the endpoints; getBezierPath gives a clean curve. Kind drives the
+// stroke the way it always did: solid ink + chevron for "extends", dashed ink
+// for "implies", long-dash gold for "leads-to".
+function PlateEdge({
+  id,
+  sourceX,
+  sourceY,
+  targetX,
+  targetY,
+  data,
+}: EdgeProps<RFEdge<{ edge: AtlasEdge; fromAnchor: "south" | "center" }>>) {
+  const { hoveredId } = useContext(HoverContext);
+  const e = data!.edge;
+  const fromAnchor = data!.fromAnchor;
+  const lit = hoveredId === e.from || hoveredId === e.to;
+
+  // sourceX/Y and targetX/Y are now true marker centres (handle pinned there).
+  // Trim both ends back to the ring so the line kisses the circle instead of
+  // stabbing through it — this is the old Arrowhead() pull-back, generalised.
+  const vx = targetX - sourceX;
+  const vy = targetY - sourceY;
+  const len = Math.hypot(vx, vy) || 1;
+  const ux = vx / len;
+  const uy = vy / len;
+  const targetIsSynthesis = e.to === SYNTHESIS.id;
+  // the "s" handle isn't a ring — start right at it. "c" is the marker, so
+  // pull back by the ring radius like the old Arrowhead() did.
+  const startGap = fromAnchor === "south" ? 2 : ATOM_RADIUS + 2;
+  const endGap = (targetIsSynthesis ? SYNTHESIS_HALF + 4 : ATOM_RADIUS) + (e.kind === "extends" ? 5 : 2);
+  const sx = sourceX + ux * startGap;
+  const sy = sourceY + uy * startGap;
+  const ex = targetX - ux * endGap;
+  const ey = targetY - uy * endGap;
+
+  // perpendicular bow — the designer's curve control, from data
+  const bend = e.bend ?? 0;
+  const px = -uy;
+  const py = ux;
+  const mx = (sx + ex) / 2;
+  const my = (sy + ey) / 2;
+  const cx = mx + px * bend;
+  const cy = my + py * bend;
+
+  const path = `M ${sx} ${sy} Q ${cx} ${cy} ${ex} ${ey}`;
+
+  // point on the quadratic at t=0.5, then nudged by the data label offset
+  const off = e.labelOffset ?? { dx: 0, dy: 0 };
+  const labelX = 0.25 * sx + 0.5 * cx + 0.25 * ex + off.dx;
+  const labelY = 0.25 * sy + 0.5 * cy + 0.25 * ey + off.dy;
+
+  const dash = e.kind === "implies" ? "4 3" : e.kind === "leads-to" ? "11 5" : undefined;
+  const baseStroke = e.kind === "leads-to" ? "var(--gold)" : "var(--ink)";
+  const stroke = lit ? "var(--vermilion)" : baseStroke;
+  const width = lit ? 1.4 : e.kind === "leads-to" ? 1.2 : 0.9;
+
+  return (
+    <>
+      <BaseEdge
+        id={id}
+        path={path}
+        markerEnd={e.kind === "extends" ? (lit ? "url(#chevron-lit)" : "url(#chevron)") : undefined}
+        style={{
+          stroke,
+          strokeWidth: width,
+          strokeDasharray: dash,
+          transition: "stroke 220ms ease-out, stroke-width 220ms ease-out",
+        }}
+      />
+      <EdgeLabelRenderer>
+        <div
+          className={`edge-label ${e.kind === "leads-to" ? "leads" : ""} ${lit ? "lit" : ""}`}
+          style={{ transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)` }}
+        >
+          {e.label}
+        </div>
+      </EdgeLabelRenderer>
+    </>
+  );
+}
+
+const nodeTypes = { atom: AtomNode, synthesis: SynthesisNode };
+const edgeTypes = { plate: PlateEdge };
+
+function AtlasGraph() {
+  const [hoveredId, setHovered] = useState<string | null>(null);
+
+  const nodes: RFNode[] = useMemo(() => {
+    // position is the box top-left; offset it so the marker centre lands on
+    // the curated coordinate (box centre x, ATOM_RADIUS down from the top).
+    const atomNodes: RFNode[] = ATOMS.map(atom => ({
+      id: atom.id,
+      type: "atom",
+      position: { x: atom.x - ATOM_BOX_W / 2, y: atom.y - ATOM_RADIUS },
+      data: { atom },
+      draggable: false,
+      selectable: false,
+      connectable: false,
+      deletable: false,
+    }));
+    atomNodes.push({
+      id: SYNTHESIS.id,
+      type: "synthesis",
+      position: { x: SYNTHESIS.x - SYN_BOX_W / 2, y: SYNTHESIS.y - SYNTHESIS_HALF },
+      data: {},
+      draggable: false,
+      selectable: false,
+      connectable: false,
+      deletable: false,
+    });
+    return atomNodes;
+  }, []);
+
+  const edges: RFEdge[] = useMemo(() => {
+    const yOf = (id: string) => (id === SYNTHESIS.id ? SYNTHESIS.y : (ATOMS.find(a => a.id === id)?.y ?? 0));
+    return EDGES.map(edge => {
+      // a meaningfully downward edge leaves from below the card (handle "s")
+      // and lands on the target marker — so it never crosses a caption.
+      const vertical = yOf(edge.to) - yOf(edge.from) > 250;
+      return {
+        id: `${edge.from}-${edge.to}`,
+        source: edge.from,
+        target: edge.to,
+        sourceHandle: vertical ? "s" : "c",
+        targetHandle: "c",
+        type: "plate",
+        data: { edge, fromAnchor: vertical ? "south" : "center" },
+        selectable: false,
+        deletable: false,
+      };
+    });
+  }, []);
+
+  return (
+    <HoverContext.Provider value={{ hoveredId, setHovered }}>
+      {/* chevron marker defs — one definition, referenced by extends edges */}
+      <svg style={{ position: "absolute", width: 0, height: 0 }} aria-hidden>
+        <defs>
+          <marker
+            id="chevron"
+            viewBox="0 0 10 10"
+            refX="8"
+            refY="5"
+            markerWidth="7"
+            markerHeight="7"
+            orient="auto-start-reverse"
+          >
+            <path
+              d="M 1 1 L 8 5 L 1 9"
+              fill="none"
+              stroke="var(--ink)"
+              strokeWidth="1"
+              strokeLinejoin="round"
+              strokeLinecap="round"
+            />
+          </marker>
+          <marker
+            id="chevron-lit"
+            viewBox="0 0 10 10"
+            refX="8"
+            refY="5"
+            markerWidth="7"
+            markerHeight="7"
+            orient="auto-start-reverse"
+          >
+            <path
+              d="M 1 1 L 8 5 L 1 9"
+              fill="none"
+              stroke="var(--vermilion)"
+              strokeWidth="1.1"
+              strokeLinejoin="round"
+              strokeLinecap="round"
+            />
+          </marker>
+        </defs>
+      </svg>
+
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
+        fitView
+        fitViewOptions={{ padding: 0.14 }}
+        nodesDraggable={false}
+        nodesConnectable={false}
+        elementsSelectable={false}
+        panOnDrag={false}
+        panOnScroll={false}
+        zoomOnScroll={false}
+        zoomOnPinch={false}
+        zoomOnDoubleClick={false}
+        preventScrolling={false}
+        proOptions={{ hideAttribution: true }}
+      />
+    </HoverContext.Provider>
+  );
+}
 
 export default function AtlasPage() {
-  const [hoveredId, setHoveredId] = useState<string | null>(null);
-
-  const allNodes = useMemoNodes();
-
-  function nodePos(id: string): { x: number; y: number } {
-    return allNodes[id];
-  }
-
   return (
     <>
       <style>{`
@@ -205,10 +562,6 @@ export default function AtlasPage() {
           from { opacity: 0; transform: translateY(8px); }
           to   { opacity: 1; transform: translateY(0); }
         }
-        @keyframes drawIn {
-          from { stroke-dashoffset: 600; opacity: 0; }
-          to   { stroke-dashoffset: 0;   opacity: 1; }
-        }
         @keyframes frameDraw {
           from { stroke-dashoffset: 4000; }
           to   { stroke-dashoffset: 0; }
@@ -216,42 +569,120 @@ export default function AtlasPage() {
         .frontispiece-title { animation: fadeUp 0.7s ease-out both; }
         .frontispiece-sub   { animation: fadeUp 0.7s 0.18s ease-out both; }
         .plate-marginalia   { animation: fadeUp 0.7s 0.32s ease-out both; }
-        .plate-frame        {
+        .plate-frame {
           stroke-dasharray: 4000;
           animation: frameDraw 1.4s 0.20s ease-out both;
         }
-        .atom {
-          opacity: 0;
-          animation: fadeUp 0.55s ease-out forwards;
-        }
-        .edge {
-          stroke-dasharray: 600;
-          stroke-dashoffset: 600;
-          opacity: 0;
-          animation: drawIn 0.85s ease-out forwards;
-        }
+        .react-flow-wrap { animation: fadeUp 0.9s 0.5s ease-out both; }
         .editors-note { animation: fadeUp 0.7s 1.40s ease-out both; }
 
-        .atom-marker {
-          transition: transform 220ms ease-out;
+        /* ── React Flow de-chroming — kill every flowchart-tool tell ── */
+        .atlas-page .react-flow,
+        .atlas-page .react-flow__renderer,
+        .atlas-page .react-flow__pane { background: transparent; cursor: default; }
+        .atlas-page .react-flow__node { font-family: var(--font-display); }
+        .atlas-page .react-flow__node:focus,
+        .atlas-page .react-flow__node:focus-visible { outline: none; }
+        .atlas-page .react-flow__edge { cursor: default; }
+        .atlas-page .react-flow__edge .react-flow__edge-path { stroke-linecap: round; }
+        .atlas-page .atlas-handle {
+          opacity: 0; width: 1px; height: 1px; min-width: 0; min-height: 0;
+          border: 0; background: transparent; pointer-events: none;
+          left: 50%; top: 50%; transform: translate(-50%, -50%);
         }
-        .atom:hover .atom-marker {
-          transform: scale(1.07);
+        .atlas-page .react-flow__attribution { display: none; }
+
+        /* React Flow clips node overflow by default — let marginalia + captions show */
+        .atlas-page .react-flow__node { overflow: visible; }
+
+        /* ── nodes as plate markers ── */
+        .atlas-page .atlas-link { text-decoration: none; color: inherit; cursor: alias; display: block; }
+        .atlas-page .atlas-link.locked { cursor: not-allowed; }
+        .atlas-page .atlas-link.locked .atom-box,
+        .atlas-page .atom-box.locked { opacity: 0.45; }
+        .atom-box {
+          position: relative;
+          display: flex; flex-direction: column; align-items: center;
+          user-select: none;
         }
-        .atom:hover .atom-name {
-          color: var(--vermilion);
+        /* engraved-plate knockout — wherever a rule crosses a label, the
+           label wins and the line breaks behind it (paper halo). */
+        .atlas-page .knockout {
+          text-shadow:
+            0 0 5px var(--paper), 0 0 4px var(--paper),
+            0 0 4px var(--paper), 0 0 3px var(--paper),
+            0 0 2px var(--paper), 0 0 2px var(--paper);
         }
-        .atom-name { transition: color 180ms ease-out; }
+        .atom-roman {
+          position: absolute; left: calc(50% - 40px); top: -8px;
+          font-size: 10px; text-transform: uppercase; letter-spacing: 0.22em;
+          color: var(--gold);
+        }
+        .atom-marker { transition: transform 220ms ease-out; }
+        .atlas-link:not(.locked):hover .atom-marker { transform: scale(1.07); }
+        .atom-text {
+          margin-top: 14px; text-align: center;
+        }
+        .atom-name {
+          font-style: italic; font-size: 17px; color: var(--ink);
+          letter-spacing: -0.005em; transition: color 180ms ease-out;
+          white-space: nowrap;
+        }
+        .atom-name.lit { color: var(--vermilion); }
+        .atom-caption {
+          margin: 4px auto 0; font-size: 10.5px; line-height: 1.45;
+          color: var(--ink-soft); max-width: 210px;
+        }
+        .atom-locked {
+          margin-top: 4px; font-size: 9px; text-transform: uppercase;
+          letter-spacing: 0.2em; color: var(--gold);
+        }
 
-        .edge-line { transition: stroke 220ms ease-out, stroke-width 220ms ease-out; }
-        .edge-line.lit { stroke: var(--vermilion); stroke-width: 1.4; }
-        .edge-label { transition: fill 220ms ease-out; }
-        .edge-label.lit { fill: var(--vermilion); }
+        /* ── synthesis monument ── */
+        .syn-box {
+          position: relative;
+          display: flex; flex-direction: column; align-items: center;
+          user-select: none;
+        }
+        .syn-frame {
+          position: relative; display: flex; align-items: center; justify-content: center;
+          border: 0.8px solid var(--gold);
+        }
+        .syn-frame-outer {
+          position: absolute; left: 50%; top: 50%;
+          width: ${(SYNTHESIS_HALF + 6) * 2}px; height: ${(SYNTHESIS_HALF + 6) * 2}px;
+          transform: translate(-50%, -50%);
+          border: 0.5px dashed var(--gold-soft); pointer-events: none;
+        }
+        .syn-letter {
+          font-family: var(--font-display); font-size: 80px; font-weight: 300;
+          font-style: italic; color: var(--gold); opacity: 0.75; line-height: 1;
+        }
+        .syn-text {
+          margin-top: 16px; text-align: center; white-space: nowrap;
+        }
+        .syn-kicker { font-size: 9px; letter-spacing: 3px; color: var(--gold); }
+        .syn-name {
+          margin-top: 6px; font-family: var(--font-display); font-size: 20px;
+          font-style: italic; color: var(--ink);
+        }
+        .syn-caption {
+          margin-top: 4px; font-family: var(--font-display); font-size: 12px;
+          font-style: italic; color: var(--ink-soft);
+        }
 
-        .completed-flourish circle:first-child { fill: var(--vermilion); }
-
-        .atlas-link { cursor: alias; }
-        .atlas-link.locked { cursor: not-allowed; }
+        /* ── edge labels — italic word with a paper knockout halo ── */
+        .atlas-page .edge-label {
+          position: absolute; pointer-events: none;
+          font-family: var(--font-display); font-style: italic;
+          font-size: 11px; color: var(--ink-soft);
+          text-shadow:
+            0 0 3px var(--paper), 0 0 3px var(--paper),
+            0 0 2px var(--paper), 0 0 2px var(--paper);
+          transition: color 220ms ease-out;
+        }
+        .atlas-page .edge-label.leads { font-size: 13px; color: var(--gold); }
+        .atlas-page .edge-label.lit { color: var(--vermilion); }
       `}</style>
 
       <main
@@ -265,7 +696,7 @@ export default function AtlasPage() {
               className="mono frontispiece-sub text-[10px] uppercase tracking-[0.22em]"
               style={{ color: "var(--gold)" }}
             >
-              an experimental edition · v0.1
+              an experimental edition · v0.3
             </span>
             <span
               className="mono frontispiece-sub text-[10px] uppercase tracking-[0.22em]"
@@ -304,7 +735,6 @@ export default function AtlasPage() {
         {/* ── plate ─────────────────────────────────────────────────────── */}
         <section className="mx-auto max-w-[1280px] px-10 pb-10">
           <div className="relative plate-marginalia">
-            {/* plate marginalia (upper-right corner of the frame) */}
             <div
               className="absolute right-2 -top-7 mono text-[10px] uppercase tracking-[0.24em]"
               style={{ color: "var(--gold)" }}
@@ -318,27 +748,27 @@ export default function AtlasPage() {
               fig. ø — the territory
             </div>
 
-            {/* the plate itself */}
-            <div
-              className="relative mx-auto"
-              style={{
-                width: CANVAS_W,
-                maxWidth: "100%",
-                aspectRatio: `${CANVAS_W} / ${CANVAS_H}`,
-              }}
-            >
+            <div className="relative mx-auto" style={{ width: 1180, maxWidth: "100%", aspectRatio: "1180 / 600" }}>
+              {/* the React Flow plate */}
+              <div className="react-flow-wrap absolute inset-0">
+                <ReactFlowProvider>
+                  <AtlasGraph />
+                </ReactFlowProvider>
+              </div>
+
+              {/* decorative frame — overlaid, never part of the pannable canvas */}
               <svg
-                viewBox={`0 0 ${CANVAS_W} ${CANVAS_H}`}
+                viewBox="0 0 1180 600"
                 width="100%"
                 height="100%"
+                className="pointer-events-none absolute inset-0"
                 style={{ display: "block", overflow: "visible" }}
               >
-                {/* double-rule frame */}
                 <rect
                   x="2"
                   y="2"
-                  width={CANVAS_W - 4}
-                  height={CANVAS_H - 4}
+                  width={1176}
+                  height={596}
                   fill="none"
                   stroke="var(--ink)"
                   strokeWidth="1"
@@ -347,21 +777,19 @@ export default function AtlasPage() {
                 <rect
                   x="10"
                   y="10"
-                  width={CANVAS_W - 20}
-                  height={CANVAS_H - 20}
+                  width={1160}
+                  height={580}
                   fill="none"
                   stroke="var(--rule)"
                   strokeWidth="0.8"
                   className="plate-frame"
                   style={{ animationDelay: "0.32s" }}
                 />
-
-                {/* corner ornaments — small fleurons */}
                 {[
                   { x: 28, y: 28 },
-                  { x: CANVAS_W - 28, y: 28 },
-                  { x: 28, y: CANVAS_H - 28 },
-                  { x: CANVAS_W - 28, y: CANVAS_H - 28 },
+                  { x: 1152, y: 28 },
+                  { x: 28, y: 572 },
+                  { x: 1152, y: 572 },
                 ].map((p, i) => (
                   <text
                     key={i}
@@ -373,281 +801,11 @@ export default function AtlasPage() {
                     fontSize="14"
                     fontFamily="var(--font-display)"
                     fontStyle="italic"
-                    className="atom"
-                    style={{ animationDelay: "1.0s" }}
                   >
                     ❦
                   </text>
                 ))}
-
-                {/* edges — drawn first so atoms sit on top */}
-                {EDGES.map((edge, i) => {
-                  const a = nodePos(edge.from);
-                  const b = nodePos(edge.to);
-                  const lit = hoveredId === edge.from || hoveredId === edge.to;
-                  const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
-                  const bend = edge.bend ?? 0;
-                  const ctrl = {
-                    x: mid.x + bend,
-                    y: mid.y - Math.abs(bend) * 0.6,
-                  };
-                  const dash = edge.kind === "implies" ? "4 3" : edge.kind === "leads-to" ? "11 5" : undefined;
-                  const stroke = edge.kind === "leads-to" ? "var(--gold)" : "var(--ink)";
-                  const baseWidth = edge.kind === "leads-to" ? 1.2 : 0.9;
-                  return (
-                    <g
-                      key={`${edge.from}-${edge.to}`}
-                      className="edge"
-                      style={{ animationDelay: `${0.8 + i * 0.08}s` }}
-                    >
-                      {/* the line */}
-                      <path
-                        d={`M ${a.x} ${a.y} Q ${ctrl.x} ${ctrl.y} ${b.x} ${b.y}`}
-                        fill="none"
-                        stroke={stroke}
-                        strokeWidth={baseWidth}
-                        strokeDasharray={dash}
-                        className={`edge-line ${lit ? "lit" : ""}`}
-                      />
-
-                      {/* arrowhead — only for solid extends */}
-                      {edge.kind === "extends" && (
-                        <Arrowhead to={b} ctrl={ctrl} color={lit ? "var(--vermilion)" : "var(--ink)"} />
-                      )}
-
-                      {/* edge label — italic word riding on the line */}
-                      <text
-                        x={ctrl.x + edge.labelOffset.dx}
-                        y={ctrl.y + edge.labelOffset.dy}
-                        textAnchor="middle"
-                        fill={edge.kind === "leads-to" ? "var(--gold)" : "var(--ink-soft)"}
-                        fontSize={edge.kind === "leads-to" ? "13" : "11"}
-                        fontFamily="var(--font-display)"
-                        fontStyle="italic"
-                        className={`edge-label ${lit ? "lit" : ""}`}
-                      >
-                        <tspan
-                          dx="0"
-                          dy="0"
-                          style={{
-                            paintOrder: "stroke",
-                            stroke: "var(--paper)",
-                            strokeWidth: 4,
-                            strokeLinejoin: "round",
-                          }}
-                        >
-                          {edge.label}
-                        </tspan>
-                      </text>
-                    </g>
-                  );
-                })}
-
-                {/* synthesis node — the U drop-cap monument */}
-                <g className="atom" style={{ animationDelay: "1.05s" }}>
-                  {/* hairline frame box */}
-                  <rect
-                    x={SYNTHESIS.x - SYNTHESIS_HALF}
-                    y={SYNTHESIS.y - SYNTHESIS_HALF}
-                    width={SYNTHESIS_HALF * 2}
-                    height={SYNTHESIS_HALF * 2}
-                    fill="none"
-                    stroke="var(--gold)"
-                    strokeWidth="0.8"
-                  />
-                  {/* outer faint */}
-                  <rect
-                    x={SYNTHESIS.x - SYNTHESIS_HALF - 6}
-                    y={SYNTHESIS.y - SYNTHESIS_HALF - 6}
-                    width={(SYNTHESIS_HALF + 6) * 2}
-                    height={(SYNTHESIS_HALF + 6) * 2}
-                    fill="none"
-                    stroke="var(--gold-soft)"
-                    strokeWidth="0.5"
-                    strokeDasharray="2 4"
-                  />
-                  {/* the U */}
-                  <text
-                    x={SYNTHESIS.x}
-                    y={SYNTHESIS.y + 2}
-                    textAnchor="middle"
-                    dominantBaseline="middle"
-                    fill="var(--gold)"
-                    fontFamily="var(--font-display)"
-                    fontSize="80"
-                    fontWeight="300"
-                    fontStyle="italic"
-                    style={{ opacity: 0.75 }}
-                  >
-                    U
-                  </text>
-                  {/* labels under the monument */}
-                  <text
-                    x={SYNTHESIS.x}
-                    y={SYNTHESIS.y + SYNTHESIS_HALF + 26}
-                    textAnchor="middle"
-                    fill="var(--gold)"
-                    fontFamily="var(--font-mono)"
-                    fontSize="9"
-                    letterSpacing="3"
-                  >
-                    DESTINATION
-                  </text>
-                  <text
-                    x={SYNTHESIS.x}
-                    y={SYNTHESIS.y + SYNTHESIS_HALF + 44}
-                    textAnchor="middle"
-                    fill="var(--ink)"
-                    fontFamily="var(--font-display)"
-                    fontSize="20"
-                    fontStyle="italic"
-                    fontWeight="400"
-                  >
-                    {SYNTHESIS.label}
-                  </text>
-                  <text
-                    x={SYNTHESIS.x}
-                    y={SYNTHESIS.y + SYNTHESIS_HALF + 64}
-                    textAnchor="middle"
-                    fill="var(--ink-soft)"
-                    fontFamily="var(--font-display)"
-                    fontSize="12"
-                    fontStyle="italic"
-                  >
-                    {SYNTHESIS.caption}
-                  </text>
-                </g>
               </svg>
-
-              {/* atom markers — HTML so Link prefetches and hover is clean */}
-              {ATOMS.map((atom, i) => {
-                const left = `${(atom.x / CANVAS_W) * 100}%`;
-                const top = `${(atom.y / CANVAS_H) * 100}%`;
-                const locked = atom.status === "locked";
-                const className = `atom atlas-link ${locked ? "locked" : ""} absolute -translate-x-1/2 -translate-y-1/2 select-none`;
-                const style = {
-                  left,
-                  top,
-                  animationDelay: `${0.5 + i * 0.08}s`,
-                  textDecoration: "none",
-                  color: "inherit",
-                  opacity: locked ? 0.45 : 1,
-                };
-                const onEnter = () => setHoveredId(atom.id);
-                const onLeave = () => setHoveredId(null);
-                const inner = (
-                  <>
-                    {/* roman numeral marginalia */}
-                    <span
-                      className="absolute mono text-[10px] uppercase tracking-[0.22em]"
-                      style={{
-                        color: "var(--gold)",
-                        left: atom.romanOffset?.dx ?? -38,
-                        top: atom.romanOffset?.dy ?? -34,
-                      }}
-                    >
-                      {atom.roman}
-                    </span>
-
-                    {/* the marker itself */}
-                    <div
-                      className="atom-marker relative"
-                      style={{
-                        width: ATOM_RADIUS * 2,
-                        height: ATOM_RADIUS * 2,
-                      }}
-                    >
-                      <svg
-                        width={ATOM_RADIUS * 2}
-                        height={ATOM_RADIUS * 2}
-                        viewBox={`0 0 ${ATOM_RADIUS * 2} ${ATOM_RADIUS * 2}`}
-                        style={{ display: "block" }}
-                      >
-                        {/* outer ring */}
-                        <circle
-                          cx={ATOM_RADIUS}
-                          cy={ATOM_RADIUS}
-                          r={ATOM_RADIUS - 2}
-                          fill="var(--paper)"
-                          stroke="var(--ink)"
-                          strokeWidth={atom.status === "completed" ? 1.4 : 1}
-                          strokeDasharray={locked ? "2 3" : undefined}
-                        />
-                        {/* completion flourish — wax seal cross */}
-                        {atom.status === "completed" && (
-                          <g>
-                            <circle cx={ATOM_RADIUS} cy={ATOM_RADIUS} r="9" fill="var(--vermilion)" />
-                            <path
-                              d={`M ${ATOM_RADIUS - 4} ${ATOM_RADIUS} L ${ATOM_RADIUS + 4} ${ATOM_RADIUS} M ${ATOM_RADIUS} ${ATOM_RADIUS - 4} L ${ATOM_RADIUS} ${ATOM_RADIUS + 4}`}
-                              stroke="var(--paper)"
-                              strokeWidth="1.4"
-                              strokeLinecap="round"
-                            />
-                          </g>
-                        )}
-                        {/* available — small ink dot */}
-                        {atom.status === "available" && (
-                          <circle cx={ATOM_RADIUS} cy={ATOM_RADIUS} r="4" fill="var(--ink)" />
-                        )}
-                        {/* locked — empty interior */}
-                      </svg>
-                    </div>
-
-                    {/* atom name + caption beneath the marker */}
-                    <div
-                      className="absolute left-1/2 -translate-x-1/2 whitespace-nowrap text-center"
-                      style={{ top: ATOM_RADIUS * 2 + 14 }}
-                    >
-                      <div
-                        className="atom-name"
-                        style={{
-                          fontStyle: "italic",
-                          fontSize: 17,
-                          color: "var(--ink)",
-                          letterSpacing: "-0.005em",
-                        }}
-                      >
-                        {atom.label}
-                      </div>
-                      <div
-                        className="mono mt-1 text-[10.5px] leading-[1.45]"
-                        style={{
-                          color: "var(--ink-soft)",
-                          maxWidth: 220,
-                          whiteSpace: "normal",
-                          margin: "4px auto 0",
-                        }}
-                      >
-                        {atom.caption}
-                      </div>
-                      {locked && (
-                        <div
-                          className="mono mt-1 text-[9px] uppercase tracking-[0.2em]"
-                          style={{ color: "var(--gold)" }}
-                        >
-                          locked — completes after i
-                        </div>
-                      )}
-                    </div>
-                  </>
-                );
-                return locked ? (
-                  <div key={atom.id} onMouseEnter={onEnter} onMouseLeave={onLeave} className={className} style={style}>
-                    {inner}
-                  </div>
-                ) : (
-                  <Link
-                    key={atom.id}
-                    href={atom.href}
-                    onMouseEnter={onEnter}
-                    onMouseLeave={onLeave}
-                    className={className}
-                    style={style}
-                  >
-                    {inner}
-                  </Link>
-                );
-              })}
             </div>
           </div>
         </section>
@@ -683,56 +841,5 @@ export default function AtlasPage() {
         </section>
       </main>
     </>
-  );
-
-  // small helper kept inline because positions are small static map
-  function useMemoNodes(): Record<string, { x: number; y: number }> {
-    const out: Record<string, { x: number; y: number }> = {};
-    for (const a of ATOMS) out[a.id] = { x: a.x, y: a.y };
-    out[SYNTHESIS.id] = { x: SYNTHESIS.x, y: SYNTHESIS.y };
-    return out;
-  }
-}
-
-// Arrowhead — small open chevron pointing along the direction of the curve
-// at the destination. Computed from the control point so it sits flush to
-// the atom edge at a clean angle.
-function Arrowhead({
-  to,
-  ctrl,
-  color,
-}: {
-  to: { x: number; y: number };
-  ctrl: { x: number; y: number };
-  color: string;
-}) {
-  // direction of the curve at the endpoint = derivative of Bezier ≈ to - ctrl
-  const dx = to.x - ctrl.x;
-  const dy = to.y - ctrl.y;
-  const len = Math.hypot(dx, dy) || 1;
-  const ux = dx / len;
-  const uy = dy / len;
-  // pull back from the atom edge by ATOM_RADIUS so the arrow lands on the ring
-  const tipX = to.x - ux * (ATOM_RADIUS + 1);
-  const tipY = to.y - uy * (ATOM_RADIUS + 1);
-  // chevron wings
-  const size = 6;
-  const wingAngle = 0.5; // radians from main axis
-  const cos = Math.cos(wingAngle);
-  const sin = Math.sin(wingAngle);
-  // rotate -ux,-uy by ±wingAngle, scale by size
-  const w1x = tipX + size * (-ux * cos + -uy * -sin);
-  const w1y = tipY + size * (-uy * cos + -ux * sin);
-  const w2x = tipX + size * (-ux * cos + -uy * sin);
-  const w2y = tipY + size * (-uy * cos + -ux * -sin);
-  return (
-    <path
-      d={`M ${w1x} ${w1y} L ${tipX} ${tipY} L ${w2x} ${w2y}`}
-      fill="none"
-      stroke={color}
-      strokeWidth="0.9"
-      strokeLinejoin="round"
-      strokeLinecap="round"
-    />
   );
 }

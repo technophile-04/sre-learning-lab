@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.54",
+    "@ai-sdk/react": "^3.0.179",
     "@codemirror/language": "^6.12.3",
     "@codemirror/view": "^6.41.1",
     "@heroicons/react": "~2.1.5",
@@ -29,6 +30,7 @@
     "@tanstack/react-query": "~5.59.15",
     "@uiw/codemirror-theme-github": "^4.25.9",
     "@uiw/react-codemirror": "^4.25.9",
+    "@xyflow/react": "^12.10.2",
     "ai": "^6.0.170",
     "blo": "~1.2.0",
     "burner-connector": "0.0.20",
