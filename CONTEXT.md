@@ -8,10 +8,15 @@ on a single concept (ERC-20) curated from three canonical sources.
 
 ## Resume here (next session)
 
-**Where we are (as of 2026-05-07).** The structural shell is shipped and visible.
-The runtime round-trip is green. **What is missing is the part that makes this product
-*smart* rather than just typeset:** the AI behavior layer. That is the explicit focus
-of the next session.
+**Where we are (as of 2026-05-20).** Both bets from the structural-shell era have
+now landed in form: the atlas is a real graph (React Flow, topology-as-data), and
+the AI behaviour layer has shipped its first opinionated shape — *the marginalian*,
+a line-anchored teacher that lives in the gutter of the editor and points at the
+line it's teaching. The persona pivoted from "friend you tap on the shoulder" to
+"teacher walking you line by line" — see ADR-0002 for why. The runtime + the
+behaviour layer + the topology layer are all in place; what's missing is the
+**runtime verification** of the teacher (tool round-trip + auto-greet) and the
+**atom-completion → graph-unlock loop** that closes the learning circuit.
 
 **To verify current state in ~60 seconds:**
 
@@ -20,59 +25,83 @@ cd ~/Desktop/github/sre-learning-lab
 yarn workspace @se-2/nextjs dev
 ```
 
-Then visit, in order:
-1. `http://localhost:3000/scenes` — the atlas (frontispiece plate). 5 atoms + Uniswap synthesis. i. is completed (wax-seal cross). ii. and iii. are clickable. iv. and v. are locked.
-2. `http://localhost:3000/scenes/balance-ledger` — the only fully-built atom. Editor on left, ledger on right, sentence-form transfer composer ("send N from A to B"). Click *deploy contract*, then send a transfer. Vermilion arrow draws across the table. Audit trail slides in. The inkwell popup (bottom-right) is a static shell — input is disabled, label says "v0.2 — actual answers."
-3. `http://localhost:3000/lab` — throwaway plumbing page. Proves solc + tevm round-trip without any pedagogy on top.
+Set `OPENROUTER_API_KEY` in `packages/nextjs/.env.local` first (the marginalian
+needs it). Then visit, in order:
+1. `http://localhost:3000/scenes` — the atlas, now a React Flow graph. 5 atoms +
+   the Uniswap synthesis node. i. is `completed`, ii./iii. are `unlocked`,
+   iv./v. are `locked`. Edges, arrowheads, and node states are derived from a
+   small topology spec, not hand-drawn — adding an atom is now a data edit.
+2. `http://localhost:3000/scenes/balance-ledger` — the only fully-built atom.
+   Editor on the left with a manicule (☞) in the gutter that tracks the cursor
+   line. *The marginalian* panel sits to the right of the editor and re-anchors
+   to that same line. Click *deploy contract*, then *send a transfer*; the
+   vermilion arrow draws across the ledger, audit trail slides in, balances
+   animate. Open the marginalian and it should greet on line 1 and walk you
+   line by line, calling `pointAtLine` every turn to move your cursor.
+3. `http://localhost:3000/lab` — throwaway plumbing page. Still useful as the
+   reference for the solc + tevm round-trip without any pedagogy on top.
 
-If any of those pages don't render, type-check first (`yarn workspace @se-2/nextjs check-types`) and inspect the browser console.
+If any of those pages don't render, type-check first (`yarn workspace @se-2/nextjs check-types`)
+and inspect the browser console.
 
-**The pivot for the next session: build the AI behavior layer.** Three concrete first
-steps, in order:
+**Known unverified, top of the list for next session:**
+- The `pointAtLine` client-tool round-trip end-to-end against
+  `deepseek/deepseek-v4-flash` (the new default). If tool adherence is shaky,
+  override via `OPENROUTER_MODEL=anthropic/claude-sonnet-4.5` to isolate model
+  vs code. The route uses `stepCountIs(8)` and a `sendAutomaticallyWhen` resume
+  step on tool result; if the teacher stalls after pointing, that's where to look.
+- The kickoff auto-greet (teacher speaks first on mount, lands on line 1).
+- Pre-existing: the deployer-row overlap in the ledger panel — not from this
+  build, not blocking.
 
-1. **`packages/nextjs/app/api/friend/route.ts`** — Next.js route handler. POST endpoint
-   that accepts `{ messages, context: { atomId, source, balances, recentTransfers } }`
-   and streams an OpenRouter response. Use the Vercel AI SDK (`ai` + `@ai-sdk/openai`)
-   wired to OpenRouter's OpenAI-compatible endpoint. Key held server-side via
-   `OPENROUTER_API_KEY` env var. Streaming response back to the client. Invoke the
-   `claude-api`-equivalent or the `vercel:ai-sdk` skill before writing the handler.
+**The pivot for the next session: close the learning loop.** Two concrete steps,
+in order:
 
-2. **Wire the popup in `app/scenes/balance-ledger/page.tsx`** — the `FriendInkwell`
-   sub-component near the bottom of that file already has a disabled input and a
-   greeting message. Add `messages` state, enable the input, post-and-stream to
-   `/api/friend`, render assistant chunks into a new bubble. Pass current scene
-   context (the source string, the balances dict, the recent transfers array) as the
-   `context` field of the request body. **Before any visual changes**, invoke
-   `/frontend-design` per the rule below.
+1. **Verify the marginalian at runtime.** Boot the app with a real
+   `OPENROUTER_API_KEY`, open balance-ledger, confirm: (a) the auto-greet fires
+   on mount and lands on line 1, (b) every assistant turn calls `pointAtLine`
+   before speaking, (c) the gutter manicule + cursor + panel anchor stay in
+   sync, (d) the resume-on-tool-result step works (no stalling). File any
+   bugs as a short list — don't ship more layers on top until this is green.
 
-3. **Atom-completion detector + Socratic prompt.** In `app/scenes/balance-ledger/page.tsx`,
-   detect the canonical "you've got it" event: a successful transfer where the sender's
-   balance decremented and the receiver's incremented (we already track both). On that
-   event, mark the atom complete via `localStorage.setItem("atom:balance-ledger", "completed")`,
-   then auto-open the friend popup with **one canned Socratic question** (hardcoded for
-   v0.1; AI-generated in v0.2). Suggested question: *"Why does the contract update both
-   balances atomically? What happens if the second update fails?"* The atlas page
-   should read `localStorage` on mount so the wax-seal cross reflects what the learner
-   has actually done.
+2. **Atom-completion → graph unlock.** In
+   `app/scenes/balance-ledger/page.tsx`, detect the canonical "you've got it"
+   event: a successful transfer that decremented the sender and incremented
+   the recipient (both already tracked). Mark via
+   `localStorage.setItem("atom:balance-ledger", "completed")`. The atlas
+   already reads node states from a topology spec — wire that spec to read
+   `localStorage` on mount so the wax-seal `completed` state on the React Flow
+   node reflects what the learner actually did. v0.1 unlock semantics:
+   completing i. flips ii./iii. from `unlocked` to `inviting` (small visual
+   nudge); iv./v. remain locked.
 
 **What's intentionally still deferred** (do not build these next session):
-- Voice / cursor-pointing for the friend (clicky's signature features)
-- Atoms iv. and v. — they're locked on the atlas; the form factor is proven, the
-  content can wait
-- The Uniswap synthesis door
-- Cross-session memory (the friend resets each page-load — fine for v0.1)
-- The Address-from-scaffold-eth refactor [[shiv]] flagged ("for another conversation")
+- Voice / cursor-pointing on screen (clicky's signature features).
+- Atoms iv. and v. — locked on the atlas; the form factor is proven, the
+  content can wait.
+- The Uniswap synthesis door.
+- Cross-session memory (the marginalian resets each page-load — fine for v0.1).
+- The Address-from-scaffold-eth refactor [[shiv]] flagged ("for another conversation").
+- Dynamic question generation along the explain → justify → apply tier gradient —
+  the v0.1 teacher walks the script in the system prompt; v0.2 generates.
 
 **Files to read in this order if a fresh Claude (or fresh-Shiv) is picking this up cold:**
-1. `CONTEXT.md` (this file) — the whole `## Glossary` section.
-2. `docs/adr/0001-stay-on-se2-substrate.md` — why we did NOT fork remix-lite.
-3. `packages/nextjs/app/scenes/balance-ledger/page.tsx` — the reference scene with
-   the editorial aesthetic baked in. Any new scene/component should match this voice.
-4. `packages/nextjs/app/scenes/page.tsx` — the atlas, to see how navigation hangs together.
-5. The grilling transcript that produced this design lives in conversation memory
-   only — not the repo. Sandgarden update for [[carlos]] at
-   `2. Areas/sandgarden/updates/2026-05-07-learning-platform-v01-plan.md` in the
-   vault has the highlights.
+1. `CLAUDE.md` — the one-screen orientation pointer.
+2. `CONTEXT.md` (this file) — the whole `## Glossary` section.
+3. `docs/adr/0001-stay-on-se2-substrate.md` — why we did NOT fork remix-lite.
+4. `docs/adr/0002-line-anchored-teacher.md` — why the friend became the marginalian
+   and what changed in the interaction model.
+5. `packages/nextjs/app/api/friend/route.ts` — the teacher's system prompt and
+   the `pointAtLine` client-forwarded tool. The behaviour contract lives here.
+6. `packages/nextjs/app/scenes/balance-ledger/page.tsx` — the reference scene
+   with the manicule gutter, the marginalian panel, and the tool round-trip.
+   Any new scene should match this aesthetic.
+7. `packages/nextjs/app/scenes/page.tsx` — the React Flow atlas. The topology
+   spec at the top of the file is the source of truth for what the graph shows.
+8. The vault entries for [[carlos]] reactions and the Carlos × Jeffrey/RareSkills
+   meet — at `2. Areas/sandgarden/updates/2026-05-07-learning-platform-v01-plan.md`
+   and `2026-05-08-carlos-jeffrey-ai-education-meet.md` — provide the strategic
+   framing the repo doesn't carry.
 
 The build-progress log lower in this file (`### build progress`) has the running
 chronological record of what's landed, with dates.
@@ -196,28 +225,51 @@ Reference repos to lift patterns from (not fork):
 Models: routed through OpenRouter (per the original brief). AI calls go through a thin
 server route in the Next.js app; client never holds the OpenRouter key.
 
-### AI friend behaviour (v0.1)
-**Mostly summoned, occasionally Socratic at atom-completion beats.**
+### AI behaviour (v0.1) — *the marginalian*, the line-anchored teacher
 
-- Default mode: silent. The popup is closed. The friend does not interrupt while the
-  learner is mid-tinker.
-- Summoned mode: learner opens the popup (icon or shortcut). The friend has full context
-  — current atom, current code in the editor, recent state mutations from tevm, what the
-  learner has already tried.
-- Proactive mode: at *atom-completion beats* — defined as (a) the canonical "you've got
-  it" condition for the atom is met (e.g. for balance ledger: a successful transfer that
-  decremented sender and incremented recipient), and (b) the learner has been idle ~30s —
-  the friend surfaces ONE Socratic question. The learner can answer or dismiss. Answering
-  is what unlocks the next atom on the graph. The v0.1 hardcoded question is *the
-  explain-tier checkpoint* for that atom (see depth tiers under `### decomposition unit`);
-  v0.2 generates the question dynamically and walks the explain → justify → apply gradient
-  based on prior answers.
-- The friend's tone is peer-to-peer, not teacher-to-student. Casual, honest, short. Not
-  hype. Not "great question!" cheerleading. (See the sandgarden writing style for voice.)
-- Adaptation: the friend reads the learner's prior answers and code edits within the
-  current session and adjusts depth. No cross-session memory in v0.1.
+The original v0.1 plan was a *friend* — a summonable corner popup the learner tapped
+on the shoulder. That shipped (ADR-0002) and got replaced. The current shape is a
+**teacher** anchored to a specific line of the contract, with a pointing hand. See
+`docs/adr/0002-line-anchored-teacher.md` for the full rationale; the short version
+is below.
 
-Fully out of scope for v0.1: voice, cursor-pointing on screen, always-watching mode.
+- **Persona: teacher, not chat partner.** Warm, exacting, concise, plain. The system
+  prompt enforces one line of code (or one tight logical group) per turn, with
+  exactly one question at the end, no walls of text, no hype, no em dashes. The
+  understanding-bearing *why* and *what if* always stay as questions — never
+  pre-empt a question with its answer.
+- **Anchored to a line, not a corner.** The marginalian panel lives beside the
+  editor and re-anchors to whichever line the learner's cursor is on. A manicule
+  (☞) in the CodeMirror gutter tracks the same line natively, so the teacher's
+  pointing finger and the learner's cursor are always the same thing.
+- **Deixis via the `pointAtLine` tool.** Client-forwarded tool (no server `execute`).
+  Every assistant turn calls `pointAtLine(line)` first to move the cursor + manicule,
+  *then* speaks. The client runs the tool, replies with `addToolResult`, and
+  `sendAutomaticallyWhen` on the server resumes the step so the teacher keeps
+  talking. `stepCountIs(8)` bounds the loop. If the teacher stalls after pointing,
+  the resume step is where to look.
+- **First turn (auto-greet, unverified at runtime as of this writing).** On mount,
+  the teacher calls `pointAtLine(1)`, greets in one sentence, explains line 1,
+  and ends with one question that nudges the learner to predict line 2.
+- **Atom-completion beat (still TODO).** The canonical "you've got it" condition
+  (for balance-ledger: a successful transfer that decremented sender and
+  incremented recipient) is detected client-side, persisted to `localStorage`,
+  and the React Flow atlas reads it on mount to flip the node state. v0.1 ships
+  with the *script* of the teacher's explain-tier walkthrough baked into the
+  system prompt; v0.2 generates questions dynamically along the explain →
+  justify → apply gradient (`### decomposition unit`).
+- **Context the teacher sees.** Current atom id, the source string of the
+  contract, the balances dict, the recent transfers array, and the
+  `cursorLine: { number, text }` the learner is currently on. No cross-session
+  memory in v0.1 — the marginalian resets each page-load.
+
+**Model.** Default `deepseek/deepseek-v4-flash` (fast, cheap, 1M context — the
+walkthrough leans on the model calling `pointAtLine` every turn, so tool adherence
+matters more than reasoning depth). Override via `OPENROUTER_MODEL` (e.g.
+`anthropic/claude-sonnet-4.5`) to isolate model vs code if behaviour is shaky.
+
+Fully out of scope for v0.1: voice, cursor-pointing on the *visualization* side
+of the scene (the table/arrows), always-watching mode, cross-session memory.
 
 ### v0.1 scope decisions
 - **One atom shipped end-to-end first**: balance ledger. Reasoning: simplest visualization
@@ -369,6 +421,35 @@ Update this section every time a meaningful chunk lands or a decision changes.
       reads (90/10 AI-to-human split for v0.2+, June Uniswap V3 boot camp as a deployment
       surface, foundational-over-trending validation for the ERC-20 testbed pick) live
       in vault at `2. Areas/sandgarden/updates/2026-05-08-carlos-jeffrey-ai-education-meet.md`.
-- [ ] **week 3 — graph + Socratic** — atom graph homepage; one Socratic question; vercel deploy
+- [x] **2026-05-20 — React Flow atlas + the marginalian (line-anchored teacher).**
+      Two pivots landed on `v03-atlas-reactflow`. **(1)** The atlas migrated from
+      hand-coded SVG (manual bezier math, every node + edge positioned by hand)
+      to **React Flow** (`@xyflow/react` ^12.10.2). Topology is now a small data
+      spec at the top of `app/scenes/page.tsx` — nodes carry a `state`
+      (`locked` / `unlocked` / `completed`), edges + arrowheads + visual state
+      derive from that spec. Adding an atom is a data edit, not a layout
+      session. The state field is the hook the atom-completion → graph-unlock
+      loop will read from `localStorage`. **(2)** The corner inkwell popup got
+      replaced by **the marginalian**, a line-anchored teacher (see ADR-0002):
+      a CodeMirror gutter manicule (☞, `ManiculeMarker` + `teacherGutter`)
+      tracks the cursor line natively, the marginalian panel re-anchors to the
+      same line, and the AI persona pivoted from "friend you tap on the
+      shoulder" to "teacher walking you line by line." The route handler at
+      `app/api/friend/route.ts` now ships a `pointAtLine` client-forwarded
+      tool — the teacher calls it every turn to move the learner's cursor;
+      the client runs it, replies via `addToolResult`, and
+      `sendAutomaticallyWhen` on the server resumes the step so the teacher
+      keeps speaking. `stepCountIs(8)` bounds the loop. Default model flipped
+      to `deepseek/deepseek-v4-flash` (cheap, fast, 1M context — the
+      walkthrough leans on tool adherence over reasoning depth);
+      `OPENROUTER_MODEL` override documented inline.
+      **Known unverified at commit time (top of next session):** the
+      `pointAtLine` tool round-trip end-to-end and the kickoff auto-greet
+      both need runtime confirmation against `OPENROUTER_API_KEY`. The
+      deployer-row overlap in the ledger panel is pre-existing, not from
+      this build.
+- [ ] **week 3 — verify + close the loop** — runtime-verify the marginalian
+      (tool round-trip + auto-greet), wire atom-completion → `localStorage` →
+      React Flow node state, vercel deploy.
 </content>
 </invoke>
