@@ -1,6 +1,6 @@
 # ADR-0002: Replace the summoned "friend" with a line-anchored "teacher" (the marginalian)
 
-- **Status:** Accepted
+- **Status:** Superseded by [ADR-0003](./0003-flashcard-deck.md)
 - **Date:** 2026-05-20
 - **Deciders:** shiv
 

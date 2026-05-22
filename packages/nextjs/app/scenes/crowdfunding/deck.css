@@ -1,0 +1,377 @@
+/* Indigo Study Deck — theme + motion. Scoped under .deck-root. */
+
+.deck-root {
+  --bg: #16141d;
+  --bg-2: #1e1b27;
+  --card: #f5f0e4;
+  --card-edge: #e4dcc8;
+  --ink: #1a1822;
+  --ink-soft: #6f6a5b;
+  --ink-faint: #a49d8a;
+  --saffron: #e0913a;
+  --saffron-deep: #c2761f;
+  --saffron-wash: rgba(224, 145, 58, 0.1);
+  --teal: #4c9c8b;
+  --teal-wash: rgba(76, 156, 139, 0.12);
+  --rule: rgba(26, 24, 34, 0.12);
+  --rule-soft: rgba(26, 24, 34, 0.06);
+
+  font-family: var(--font-body), system-ui, sans-serif;
+  min-height: 100vh;
+  background:
+    radial-gradient(120% 80% at 50% -10%, rgba(224, 145, 58, 0.08), transparent 60%),
+    radial-gradient(100% 60% at 50% 110%, rgba(76, 156, 139, 0.06), transparent 55%),
+    var(--bg);
+  color: var(--card);
+  position: relative;
+}
+
+/* fine grain over the dark desk */
+.deck-root::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.5;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.018) 1px, transparent 1px);
+  background-size: 3px 3px;
+}
+
+.deck-display {
+  font-family: var(--font-display), Georgia, serif;
+}
+.deck-mono {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-feature-settings: "tnum" 1;
+}
+
+/* ── the stack ──────────────────────────────────────────────────────────── */
+/* the active card sits on top; ghost edges peek beneath to suggest depth */
+.deck-stage {
+  position: relative;
+  z-index: 1;
+}
+.deck-ghost {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  border-radius: 14px;
+  background: var(--card-edge);
+  box-shadow: 0 18px 40px -24px rgba(0, 0, 0, 0.7);
+  transition:
+    transform 360ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 360ms ease;
+}
+
+.deck-card {
+  position: relative;
+  border-radius: 14px;
+  background: var(--card);
+  color: var(--ink);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.5) inset,
+    0 40px 80px -40px rgba(0, 0, 0, 0.75),
+    0 8px 24px -16px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+
+/* the giant tier-2 glyph bleeding off the corner */
+.deck-watermark {
+  position: absolute;
+  right: -0.18em;
+  bottom: -0.34em;
+  font-family: var(--font-deva), serif;
+  font-weight: 500;
+  line-height: 0.8;
+  color: var(--ink);
+  opacity: 0.045;
+  pointer-events: none;
+  user-select: none;
+  white-space: nowrap;
+}
+
+/* card entrance — staggered rise */
+@keyframes cardRise {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+.deck-card-enter {
+  animation: cardRise 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes contentRise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.rise {
+  animation: contentRise 460ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* ── two-tier label ─────────────────────────────────────────────────────── */
+.tier1 {
+  font-family: var(--font-mono), monospace;
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--saffron-deep);
+}
+.tier2 {
+  font-family: var(--font-display), serif;
+  font-style: italic;
+  font-size: 13px;
+  color: var(--ink-faint);
+}
+
+/* ── vox code focus ─────────────────────────────────────────────────────── */
+/* dim + slightly blur every line, then un-dim the focused range */
+.vox .cm-line {
+  transition:
+    opacity 320ms ease,
+    filter 320ms ease;
+  opacity: 0.22;
+  filter: blur(0.7px);
+}
+.vox .cm-line.vox-focus {
+  opacity: 1;
+  filter: none;
+}
+/* the focus rule shows whether or not the block is dimmed (write cards) */
+.cm-focus-rule {
+  box-shadow: inset 2px 0 0 0 var(--saffron);
+  background: var(--saffron-wash);
+}
+
+/* the floating hand — eases to the focused region, gently bobs */
+.deck-hand {
+  position: absolute;
+  left: -2px;
+  color: var(--saffron);
+  font-size: 18px;
+  line-height: 1;
+  pointer-events: none;
+  transition: top 520ms cubic-bezier(0.22, 1, 0.36, 1);
+  z-index: 3;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.25));
+}
+.deck-hand span {
+  display: inline-block;
+  animation: handBob 2.4s ease-in-out infinite;
+}
+@keyframes handBob {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(4px);
+  }
+}
+
+/* ── completion seal ───────────────────────────────────────────────────── */
+@keyframes sealPress {
+  0% {
+    opacity: 0;
+    transform: scale(1.6) rotate(-8deg);
+  }
+  55% {
+    opacity: 1;
+    transform: scale(0.92) rotate(-8deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(-8deg);
+  }
+}
+.deck-seal {
+  font-family: var(--font-deva), serif;
+  color: var(--saffron);
+  border: 1.5px solid var(--saffron);
+  border-radius: 8px;
+  animation: sealPress 460ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+/* ── controls ───────────────────────────────────────────────────────────── */
+.deck-btn {
+  font-family: var(--font-mono), monospace;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  padding: 10px 18px;
+  border-radius: 9px;
+  transition:
+    transform 140ms ease,
+    background 200ms ease,
+    opacity 200ms ease;
+}
+.deck-btn:active {
+  transform: translateY(1px);
+}
+.deck-btn-primary {
+  background: var(--saffron);
+  color: #1a1208;
+  font-weight: 500;
+}
+.deck-btn-primary:hover {
+  background: var(--saffron-deep);
+}
+.deck-btn-ghost {
+  background: transparent;
+  color: var(--card);
+  border: 1px solid rgba(245, 240, 228, 0.2);
+}
+.deck-btn-ghost:hover {
+  border-color: rgba(245, 240, 228, 0.45);
+}
+.deck-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* progress rail */
+.deck-rail {
+  height: 2px;
+  background: rgba(245, 240, 228, 0.12);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.deck-rail-fill {
+  height: 100%;
+  background: var(--saffron);
+  transition: width 420ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* editable code field (YOUR TURN) */
+.deck-input {
+  font-family: var(--font-mono), monospace;
+  font-size: 13px;
+  background: #fbf8f0;
+  border: 1px solid var(--rule);
+  border-left: 2px solid var(--saffron);
+  border-radius: 6px;
+  color: var(--ink);
+  resize: none;
+}
+.deck-input:focus {
+  outline: none;
+  border-left-color: var(--saffron-deep);
+  box-shadow: 0 0 0 3px var(--saffron-wash);
+}
+
+/* verdict chips */
+.verdict-pass {
+  color: var(--teal);
+  background: var(--teal-wash);
+}
+.verdict-partial {
+  color: var(--saffron-deep);
+  background: var(--saffron-wash);
+}
+.verdict-miss {
+  color: #b4472f;
+  background: rgba(180, 71, 47, 0.1);
+}
+
+@keyframes numberPulse {
+  0% {
+    color: var(--saffron-deep);
+  }
+  100% {
+    color: inherit;
+  }
+}
+.num-pulse {
+  animation: numberPulse 800ms ease-out;
+}
+
+/* ── rich text (concept prose) ─────────────────────────────────────────── */
+.rich-body .rich-p:first-child::first-letter {
+  font-family: var(--font-display), serif;
+  font-size: 3.1em;
+  line-height: 0.8;
+  float: left;
+  padding: 6px 10px 0 0;
+  color: var(--saffron-deep);
+}
+.rich-p {
+  font-size: 16px;
+  line-height: 1.62;
+  color: var(--ink);
+  margin: 0 0 14px;
+}
+.rich-p:last-child {
+  margin-bottom: 0;
+}
+.rich-p strong {
+  font-weight: 600;
+  color: var(--ink);
+}
+.rich-p em {
+  font-family: var(--font-display), serif;
+  font-style: italic;
+  font-size: 1.06em;
+}
+.rich-code {
+  font-family: var(--font-mono), monospace;
+  font-size: 0.84em;
+  background: var(--saffron-wash);
+  color: var(--saffron-deep);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+/* ── code block (read-only vox viewer) ─────────────────────────────────── */
+.codeblock {
+  background: #fbf8f0;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  padding: 16px 18px 16px 26px;
+  font-size: 12.5px;
+  line-height: 1.7;
+  overflow-x: auto;
+}
+.codeblock pre {
+  font-family: var(--font-mono), monospace;
+  white-space: pre;
+}
+.codeblock .cm-line {
+  white-space: pre;
+}
+.codeblock .cb-ln {
+  color: var(--ink-faint);
+  margin-right: 14px;
+  user-select: none;
+}
+.cb-com {
+  color: var(--ink-faint);
+  font-style: italic;
+}
+.cb-str {
+  color: #4c7a3f;
+}
+.cb-num {
+  color: #9a6a2e;
+}
+.cb-kw {
+  color: #9a3b2a;
+}
+.cb-type {
+  color: #2f6f63;
+}
+.cb-id {
+  color: var(--ink);
+}
+.cb-pn {
+  color: var(--ink-soft);
+}

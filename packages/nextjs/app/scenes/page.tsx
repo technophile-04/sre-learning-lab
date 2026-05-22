@@ -64,15 +64,15 @@ type Atom = {
 
 const ATOMS: Atom[] = [
   {
-    id: "balance-ledger",
+    id: "crowdfunding",
     roman: "i.",
-    label: "balance ledger",
-    caption: "the contract is a database of who owns how much.",
+    label: "crowdfunding",
+    caption: "strangers pool money toward a goal, trusting only the code.",
     x: 240,
     y: 170,
-    status: "completed",
+    status: "available",
     tier: "explain",
-    href: "/scenes/balance-ledger",
+    href: "/scenes/crowdfunding",
   },
   {
     id: "direct-authorization",
@@ -145,7 +145,7 @@ type AtlasEdge = {
 
 const EDGES: AtlasEdge[] = [
   {
-    from: "balance-ledger",
+    from: "crowdfunding",
     to: "direct-authorization",
     kind: "extends",
     label: "extends",
@@ -159,7 +159,7 @@ const EDGES: AtlasEdge[] = [
     labelOffset: { dx: 0, dy: -16 },
   },
   {
-    from: "balance-ledger",
+    from: "crowdfunding",
     to: "supply-management",
     kind: "extends",
     label: "extends",
@@ -167,7 +167,7 @@ const EDGES: AtlasEdge[] = [
     labelOffset: { dx: -34, dy: 0 },
   },
   {
-    from: "balance-ledger",
+    from: "crowdfunding",
     to: "audit-trail",
     kind: "implies",
     label: "implies",
@@ -824,7 +824,7 @@ export default function AtlasPage() {
               <span style={{ color: "var(--ink)", fontStyle: "normal" }}>
                 Begin with{" "}
                 <Link
-                  href="/scenes/balance-ledger"
+                  href="/scenes/crowdfunding"
                   style={{
                     fontStyle: "italic",
                     color: "var(--vermilion)",
@@ -832,7 +832,7 @@ export default function AtlasPage() {
                     textUnderlineOffset: 4,
                   }}
                 >
-                  i. balance ledger
+                  i. crowdfunding
                 </Link>
                 .
               </span>

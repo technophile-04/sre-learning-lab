@@ -8,41 +8,63 @@ on a single concept (ERC-20) curated from three canonical sources.
 
 ## Resume here (next session)
 
-**Where we are (as of 2026-05-20).** Both bets from the structural-shell era have
-now landed in form: the atlas is a real graph (React Flow, topology-as-data), and
-the AI behaviour layer has shipped its first opinionated shape — *the marginalian*,
-a line-anchored teacher that lives in the gutter of the editor and points at the
-line it's teaching. The persona pivoted from "friend you tap on the shoulder" to
-"teacher walking you line by line" — see ADR-0002 for why. The runtime + the
-behaviour layer + the topology layer are all in place; what's missing is the
-**runtime verification** of the teacher (tool round-trip + auto-greet) and the
-**atom-completion → graph-unlock loop** that closes the learning circuit.
+**Where we are (as of 2026-05-22) — v0.4: the flashcard deck, taught on
+crowdfunding.** The line-by-line marginalian era (balance-ledger) is retired.
+Within this same pivot the deck was first built on token-vendor and then swapped to
+crowdfunding: token-vendor assumed ERC-20/approval knowledge from earlier
+challenges, so it leapt too far for a learner arriving cold. The deck now teaches
+**crowdfunding** (an earlier, gentler SRE challenge) as a slide-by-slide **deck of
+cards** — concept → code → write-a-line → question → interactive → ship.
+Curriculum is re-authored in the sandgarden voice (see
+`3. Resources/sandgarden-blog-writing-style.md` in the vault) with small,
+explain-then-test steps and no assumed knowledge.
 
-**To verify current state in ~60 seconds:**
+The decisions behind this pivot are recorded in three ADRs: `docs/adr/0003`
+(deck supersedes the line-anchored teacher + two-tier naming), `docs/adr/0004`
+(teach crowdfunding, not token-vendor), `docs/adr/0005` (the in-browser
+co-authoring runtime). ADR-0002 (the marginalian) is superseded by 0003.
+
+The deck (~28 cards) lives at `/scenes/crowdfunding`. Two-tier card names (plain
+TIER-1 label + faint Sanskrit TIER-2: sutra/darshan/lekhana/prashna/prayoga/
+prakashana/samhita) + a Devanagari watermark per type. Aesthetic: "Indigo Study
+Deck" — bone cards on a deep indigo desk, saffron accent, teal for correct,
+Instrument Serif + Hanken Grotesk + JetBrains Mono.
+
+Key pieces:
+- Content: `lib/deck/` — `types.ts` (card union), `crowdfunding-contracts.ts`
+  (CrowdFund + FundingRecipient skeletons with `__SLOT__` tokens, canonical fills,
+  `fillSlot`, `isComplete`, and `completedSources` which fills gaps with reference
+  code so an in-progress contract still deploys), `crowdfunding-deck.ts` (the card
+  array, authored from the challenge README + CONCEPTS.yaml).
+- Compile: `lib/solc-worker.ts` is multi-file with an import callback (resolves the
+  relative `./FundingRecipient.sol`; crowdfunding needs no OpenZeppelin, but
+  `lib/oz-sources.ts` + `scripts/gen-oz-sources.mjs` remain for future OZ challenges).
+  `lib/solc.ts` exposes `compileContracts()`.
+- Chain: `app/scenes/crowdfunding/_components/useChainRuntime.ts` — tevm deploy of
+  FundingRecipient→CrowdFund, contribute/execute/withdraw, and `advanceTime` (tevm
+  has no evm_increaseTime; mining ~40 blocks via `tevmMine` clears the 30s deadline,
+  ~1s/block). State changes go through `tevmContract` (native action), NOT viem
+  `writeContract` — the latter deterministically reverts a call following deploys.
+- Store: `services/store/deck-store.ts` — persisted progress + running source
+  (wrong-answer rule: canonical threads forward, learner's kept only if graded
+  equivalent). NOT persisted: the tevm deployment (chain resets on reload).
+- Grading: `app/api/grade/route.ts` — `generateObject` → `{verdict, feedback}`.
+- UI: `app/scenes/crowdfunding/_components/{Deck,cards,CodeBlock}.tsx` + `deck.css`.
+
+**Verified (2026-05-22):** `check-types` clean; `/scenes` + `/scenes/crowdfunding`
+return 200; a node repro of the shipped skeleton+canonical compiles and runs the
+full chain flow (contribute → mine past deadline → execute forwards funds +
+recipient.completed=true; failure path opens withdrawals and refunds).
+
+**NOT yet verified in a browser:** the in-browser worker compile + tevm deploy /
+contribute / execute / withdraw on the TRY IT / SHIP IT cards, and AI grading on
+YOUR TURN / THINK (needs `OPENROUTER_API_KEY` in `packages/nextjs/.env.local`).
 
 ```bash
-cd ~/Desktop/github/sre-learning-lab
-yarn workspace @se-2/nextjs dev
+cd ~/Desktop/github/sre-learning-lab && yarn workspace @se-2/nextjs dev
 ```
-
-Set `OPENROUTER_API_KEY` in `packages/nextjs/.env.local` first (the marginalian
-needs it). Then visit, in order:
-1. `http://localhost:3000/scenes` — the atlas, now a React Flow graph. 5 atoms +
-   the Uniswap synthesis node. i. is `completed`, ii./iii. are `unlocked`,
-   iv./v. are `locked`. Edges, arrowheads, and node states are derived from a
-   small topology spec, not hand-drawn — adding an atom is now a data edit.
-2. `http://localhost:3000/scenes/balance-ledger` — the only fully-built atom.
-   Editor on the left with a manicule (☞) in the gutter that tracks the cursor
-   line. *The marginalian* panel sits to the right of the editor and re-anchors
-   to that same line. Click *deploy contract*, then *send a transfer*; the
-   vermilion arrow draws across the ledger, audit trail slides in, balances
-   animate. Open the marginalian and it should greet on line 1 and walk you
-   line by line, calling `pointAtLine` every turn to move your cursor.
-3. `http://localhost:3000/lab` — throwaway plumbing page. Still useful as the
-   reference for the solc + tevm round-trip without any pedagogy on top.
-
-If any of those pages don't render, type-check first (`yarn workspace @se-2/nextjs check-types`)
-and inspect the browser console.
+Visit `/scenes/crowdfunding`, walk the deck, write the lines, then on the TRY IT
+cards contribute, "let the deadline pass", execute, and withdraw.
 
 **Known unverified, top of the list for next session:**
 - The `pointAtLine` client-tool round-trip end-to-end against
