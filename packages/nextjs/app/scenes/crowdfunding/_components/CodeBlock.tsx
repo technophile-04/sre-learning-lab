@@ -1,68 +1,25 @@
 "use client";
 
-// Read-only Solidity viewer with the vox focus effect: every line is dimmed +
-// faintly blurred except the focused range, which stays sharp behind a saffron
-// rule. The hand (☞) sits at the focused region and bobs — the teacher reading
-// along. Lines are hand-rendered (small tokenizer) for exact control of the
-// dim/focus + hand placement.
-import { useMemo } from "react";
+// Read-only Solidity viewer with the vox focus effect (modelled on vocs): every
+// line is dimmed + faintly blurred except the focused range, which stays sharp
+// behind a saffron rule. Hovering the whole block reveals every line at full
+// clarity, exactly like vocs — pure CSS (.vox:hover in deck.css), no JS. The
+// hand (☞) sits at the focused region and bobs — the teacher reading along.
+// Token colors come from Shiki's github-dark-dimmed theme (inline styles), not
+// hand-rolled CSS; focus is targeted by card metadata (fromAnchor/toAnchor),
+// NOT by `// [!code focus]` comments, so the source stays clean for the compiler.
+import { type CSSProperties, useMemo } from "react";
+import { CODE_LANG, CODE_THEME, useHighlighter } from "./highlighter";
+import type { ThemedToken } from "shiki";
 
-type Token = { t: string; c: string };
-
-const KEYWORDS = new Set([
-  "pragma",
-  "solidity",
-  "import",
-  "contract",
-  "is",
-  "function",
-  "constructor",
-  "public",
-  "private",
-  "external",
-  "internal",
-  "view",
-  "pure",
-  "payable",
-  "returns",
-  "return",
-  "memory",
-  "storage",
-  "calldata",
-  "immutable",
-  "constant",
-  "require",
-  "if",
-  "else",
-  "for",
-  "while",
-  "mapping",
-  "emit",
-  "new",
-  "this",
-  "msg",
-  "value",
-  "sender",
-]);
-const TYPES = new Set(["uint256", "uint", "int", "int256", "address", "bool", "string", "bytes", "ERC20", "Ownable"]);
-
-const TOKEN_RE = /(\/\/.*$)|(\/\*[\s\S]*?\*\/)|("(?:[^"\\]|\\.)*")|(\b\d[\d_]*\b)|([A-Za-z_$][\w$]*)|(\s+)|([^\s\w])/g;
-
-function tokenize(line: string): Token[] {
-  const out: Token[] = [];
-  let m: RegExpExecArray | null;
-  TOKEN_RE.lastIndex = 0;
-  while ((m = TOKEN_RE.exec(line))) {
-    if (m[1] || m[2]) out.push({ t: m[0], c: "cb-com" });
-    else if (m[3]) out.push({ t: m[0], c: "cb-str" });
-    else if (m[4]) out.push({ t: m[0], c: "cb-num" });
-    else if (m[5]) {
-      const w = m[5];
-      const c = KEYWORDS.has(w) ? "cb-kw" : TYPES.has(w) || /^[A-Z]/.test(w) ? "cb-type" : "cb-id";
-      out.push({ t: w, c });
-    } else out.push({ t: m[0], c: "cb-pn" });
-  }
-  return out;
+// Shiki encodes a token's font style as a bitmask: 1=italic, 2=bold, 4=underline.
+function fontStyleOf(fs?: number): CSSProperties {
+  if (!fs || fs < 0) return {};
+  const s: CSSProperties = {};
+  if (fs & 1) s.fontStyle = "italic";
+  if (fs & 2) s.fontWeight = 700;
+  if (fs & 4) s.textDecoration = "underline";
+  return s;
 }
 
 function findRange(source: string, fromAnchor: string, toAnchor?: string): [number, number] {
@@ -85,15 +42,25 @@ export function CodeBlock({
   fromAnchor?: string;
   toAnchor?: string;
   hand?: boolean;
-  /** dim + blur the non-focused lines (vox). Off for write cards so the whole
-   *  function stays readable. */
+  /** dim + blur the non-focused lines (vox). On everywhere now — hovering the
+   *  block reveals the full contract, so even write cards can dim safely. */
   dim?: boolean;
 }) {
-  const { lines, from, to } = useMemo(() => {
-    const ls = source.replace(/\s+$/, "").split("\n");
-    const [f, t] = fromAnchor ? findRange(source, fromAnchor, toAnchor) : [-1, -1];
-    return { lines: ls, from: f, to: t };
-  }, [source, fromAnchor, toAnchor]);
+  const hl = useHighlighter();
+  const { lines, tokens, from, to } = useMemo(() => {
+    const cleaned = source.replace(/\s+$/, "");
+    const ls = cleaned.split("\n");
+    const [f, t] = fromAnchor ? findRange(cleaned, fromAnchor, toAnchor) : [-1, -1];
+    let tk: ThemedToken[][] | null = null;
+    if (hl) {
+      try {
+        tk = hl.codeToTokens(cleaned, { lang: CODE_LANG, theme: CODE_THEME }).tokens;
+      } catch {
+        tk = null; // grammar/token hiccup → fall back to plain text
+      }
+    }
+    return { lines: ls, tokens: tk, from: f, to: t };
+  }, [source, fromAnchor, toAnchor, hl]);
 
   const focused = from !== -1;
 
@@ -103,10 +70,11 @@ export function CodeBlock({
         {lines.map((line, i) => {
           const inFocus = focused && i >= from && i <= to;
           const isRuleStart = focused && i === from;
+          const lineToks = tokens?.[i];
           return (
             <div
               key={i}
-              className={`cm-line ${inFocus ? "vox-focus" : ""} ${inFocus ? "cm-focus-rule" : ""}`}
+              className={`cm-line ${inFocus ? "vox-focus cm-focus-rule" : ""}`}
               style={{ position: "relative", paddingLeft: 14 }}
             >
               {hand && isRuleStart && (
@@ -115,13 +83,17 @@ export function CodeBlock({
                 </span>
               )}
               <span className="cb-ln">{String(i + 1).padStart(2, " ")}</span>
-              {line.length === 0
-                ? " "
-                : tokenize(line).map((tok, j) => (
-                    <span key={j} className={tok.c}>
-                      {tok.t}
-                    </span>
-                  ))}
+              {lineToks
+                ? lineToks.length === 0
+                  ? " "
+                  : lineToks.map((tok, j) => (
+                      <span key={j} style={{ color: tok.color, ...fontStyleOf(tok.fontStyle) }}>
+                        {tok.content}
+                      </span>
+                    ))
+                : line.length === 0
+                  ? " "
+                  : line}
             </div>
           );
         })}

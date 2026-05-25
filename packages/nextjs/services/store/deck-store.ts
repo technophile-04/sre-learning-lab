@@ -84,6 +84,12 @@ export const useDeckStore = create<DeckState>()(
     }),
     {
       name: `deck:${CROWDFUNDING_DECK.id}`,
+      // Bump whenever the contract skeleton changes shape. v0.5 removed events +
+      // the FundingRecipient contract (and its import); any `sources` persisted under
+      // an older version still carries the dead import and fails to compile, so we
+      // discard stale state and re-seed from the current skeleton instead of trusting it.
+      version: 1,
+      migrate: () => ({ cardIndex: 0, progress: {}, sources: initialSources() }) as DeckState,
       // guard SSR — the store module is evaluated on the server too
       storage: createJSONStorage(() => (typeof window !== "undefined" ? window.localStorage : undefined!)),
       partialize: state => ({

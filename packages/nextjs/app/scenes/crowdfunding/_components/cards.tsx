@@ -171,10 +171,17 @@ function Code({ card }: { card: CodeCard }) {
 function YourTurn({ card }: { card: YourTurnCard }) {
   const sources = useDeckStore(s => s.sources);
   const progress = useDeckStore(s => s.progress[card.id]);
+  const explainKey = `${card.id}__explain`;
+  const explainProgress = useDeckStore(s => s.progress[explainKey]);
   const completeYourTurn = useDeckStore(s => s.completeYourTurn);
+  const recordThink = useDeckStore(s => s.recordThink);
   const { grade, grading, err } = useGrade();
   const [draft, setDraft] = useState(progress?.answer ?? card.placeholder);
   const [result, setResult] = useState(progress ? { verdict: progress.verdict!, feedback: progress.feedback! } : null);
+  const [explainDraft, setExplainDraft] = useState(explainProgress?.answer ?? "");
+  const [explainResult, setExplainResult] = useState(
+    explainProgress ? { verdict: explainProgress.verdict!, feedback: explainProgress.feedback! } : null,
+  );
 
   async function submit() {
     const g = await grade({
@@ -184,17 +191,32 @@ function YourTurn({ card }: { card: YourTurnCard }) {
       answer: draft,
       file: card.file,
     });
-    if (!g) return;
-    setResult(g);
-    completeYourTurn({
-      cardId: card.id,
-      file: card.file,
-      slot: card.slot,
-      learnerLine: draft,
-      canonical: card.canonical,
-      verdict: g.verdict,
-      feedback: g.feedback,
-    });
+    if (g) {
+      setResult(g);
+      completeYourTurn({
+        cardId: card.id,
+        file: card.file,
+        slot: card.slot,
+        learnerLine: draft,
+        canonical: card.canonical,
+        verdict: g.verdict,
+        feedback: g.feedback,
+      });
+    }
+    // grade the reasoning box too, if this card asks for one (non-blocking)
+    if (card.explain && explainDraft.trim()) {
+      const ge = await grade({
+        mode: "think",
+        question: card.explain.prompt,
+        rubricConcepts: card.explain.rubricConcepts,
+        hint: "",
+        answer: explainDraft,
+      });
+      if (ge) {
+        setExplainResult(ge);
+        recordThink(explainKey, explainDraft, ge.verdict, ge.feedback);
+      }
+    }
   }
 
   return (
@@ -202,7 +224,10 @@ function YourTurn({ card }: { card: YourTurnCard }) {
       <p className="rich-p" style={{ marginTop: -4, marginBottom: 16 }}>
         {renderInline(card.prompt)}
       </p>
-      <CodeBlock source={sources[card.file]} fromAnchor={`/*${card.slot}*/`} dim={false} />
+      {/* derive cards (with an explanation box) show NO code — the learner writes
+          it from the theory alone, then meets it in the contract on the next
+          (reveal) card. plain your-turn cards still show the slot in context. */}
+      {!card.explain && <CodeBlock source={sources[card.file]} fromAnchor={`/*${card.slot}*/`} />}
       <textarea
         className="deck-input"
         spellCheck={false}
@@ -211,9 +236,30 @@ function YourTurn({ card }: { card: YourTurnCard }) {
         onChange={e => setDraft(e.target.value)}
         style={{ width: "100%", marginTop: 14, padding: "10px 12px" }}
       />
+      {card.explain && (
+        <>
+          <p className="rich-p" style={{ marginTop: 16, marginBottom: 6, fontSize: 14 }}>
+            {renderInline(card.explain.prompt)}
+          </p>
+          <textarea
+            className="deck-input"
+            spellCheck
+            rows={2}
+            value={explainDraft}
+            placeholder="in your own words…"
+            onChange={e => setExplainDraft(e.target.value)}
+            style={{
+              width: "100%",
+              padding: "10px 12px",
+              borderLeftColor: "var(--saffron)",
+              fontFamily: "var(--font-body)",
+            }}
+          />
+        </>
+      )}
       <div style={{ display: "flex", alignItems: "center", gap: 14, marginTop: 12 }}>
         <button className="deck-btn deck-btn-primary" onClick={submit} disabled={grading || !draft.trim()}>
-          {grading ? "checking…" : result ? "check again" : "check my line"}
+          {grading ? "checking…" : result ? "check again" : card.explain ? "check my work" : "check my line"}
         </button>
         {result && <VerdictChip verdict={result.verdict} />}
         {result && result.verdict !== "pass" && (
@@ -225,6 +271,14 @@ function YourTurn({ card }: { card: YourTurnCard }) {
       {result && (
         <p className="rich-p" style={{ marginTop: 12, color: "var(--ink-soft)", fontSize: 14 }}>
           {result.feedback}
+        </p>
+      )}
+      {explainResult && (
+        <p className="rich-p" style={{ marginTop: 6, color: "var(--ink-soft)", fontSize: 14 }}>
+          <span className="deck-mono" style={{ fontSize: 10, letterSpacing: "0.12em", marginRight: 8 }}>
+            on your reasoning
+          </span>
+          {explainResult.feedback}
         </p>
       )}
       {err && (
@@ -530,7 +584,7 @@ function ShipIt({ card, chain }: { card: ShipItCard; chain: Chain }) {
           </div>
           <div style={{ display: "grid", gap: 8 }}>
             <Addr label="CrowdFund" addr={chain.deployment.crowdFundAddress} />
-            <Addr label="FundingRecipient" addr={chain.deployment.recipientAddress} />
+            <Addr label="Recipient" addr={chain.deployment.recipientAddress} />
           </div>
           <Ledger chain={chain} />
         </div>
@@ -560,7 +614,7 @@ function Recap({ card }: { card: RecapCard }) {
       <p className="rich-p" style={{ marginTop: -4, marginBottom: 18 }}>
         {renderInline(card.body)}
       </p>
-      {(["CrowdFund.sol", "FundingRecipient.sol"] as const).map(file => (
+      {(["CrowdFund.sol"] as const).map(file => (
         <div key={file} style={{ marginBottom: 16 }}>
           <div className="deck-mono" style={{ fontSize: 11, color: "var(--saffron-deep)", marginBottom: 6 }}>
             {file}

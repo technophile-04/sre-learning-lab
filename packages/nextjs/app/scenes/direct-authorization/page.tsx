@@ -72,7 +72,7 @@ export default function DirectAuthorizationScene() {
               </span>
             </div>
             <Link
-              href="/scenes"
+              href="/"
               className="atlas-mark mono text-[10px] uppercase tracking-[0.22em]"
               style={{ color: "var(--ink-soft)" }}
             >

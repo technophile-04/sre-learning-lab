@@ -141,17 +141,24 @@
   transition:
     opacity 320ms ease,
     filter 320ms ease;
-  opacity: 0.22;
-  filter: blur(0.7px);
+  opacity: 0.32;
+  filter: blur(0.6px);
 }
 .vox .cm-line.vox-focus {
+  opacity: 1;
+  filter: none;
+}
+/* hover the whole block → every line snaps back to full clarity, exactly like
+ * vocs (their `.root:hover .line:not(.focused){opacity:1}`). pure css, no js;
+ * the transition already lives on .cm-line so it fades both ways. */
+.vox:hover .cm-line {
   opacity: 1;
   filter: none;
 }
 /* the focus rule shows whether or not the block is dimmed (write cards) */
 .cm-focus-rule {
   box-shadow: inset 2px 0 0 0 var(--saffron);
-  background: var(--saffron-wash);
+  background: rgba(224, 145, 58, 0.12);
 }
 
 /* the floating hand — eases to the focused region, gently bobs */
@@ -164,7 +171,9 @@
   pointer-events: none;
   transition: top 520ms cubic-bezier(0.22, 1, 0.36, 1);
   z-index: 3;
-  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.25));
+  /* warm glow so the saffron hand reads against the dark code panel (its old
+   * dark drop-shadow vanished on #22272e) */
+  filter: drop-shadow(0 0 4px rgba(224, 145, 58, 0.35));
 }
 .deck-hand span {
   display: inline-block;
@@ -333,9 +342,16 @@
 
 /* ── code block (read-only vox viewer) ─────────────────────────────────── */
 .codeblock {
-  background: #fbf8f0;
-  border: 1px solid var(--rule);
+  /* dark slate inset pressed into the bone card — github-dark-dimmed ground, the
+   * same theme vocs ships. token colors come inline from shiki, not from here. */
+  background: #22272e;
+  color: #adbac7;
+  border: 1px solid #1b2026;
   border-radius: 8px;
+  box-shadow:
+    inset 0 2px 5px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(0, 0, 0, 0.4),
+    0 1px 0 rgba(245, 240, 228, 0.55);
   padding: 16px 18px 16px 26px;
   font-size: 12.5px;
   line-height: 1.7;
@@ -349,29 +365,7 @@
   white-space: pre;
 }
 .codeblock .cb-ln {
-  color: var(--ink-faint);
+  color: #545d68;
   margin-right: 14px;
   user-select: none;
-}
-.cb-com {
-  color: var(--ink-faint);
-  font-style: italic;
-}
-.cb-str {
-  color: #4c7a3f;
-}
-.cb-num {
-  color: #9a6a2e;
-}
-.cb-kw {
-  color: #9a3b2a;
-}
-.cb-type {
-  color: #2f6f63;
-}
-.cb-id {
-  color: var(--ink);
-}
-.cb-pn {
-  color: var(--ink-soft);
 }

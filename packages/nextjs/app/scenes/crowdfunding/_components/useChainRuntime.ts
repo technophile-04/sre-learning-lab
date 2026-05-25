@@ -3,7 +3,7 @@
 // The in-browser chain for TRY IT + SHIP IT. Owns a tevm memory client for the
 // lifetime of the deck page (not persisted — the chain resets on reload). It
 // compiles the learner's running source (with any gaps filled in so it always
-// runs), deploys FundingRecipient then CrowdFund wired to it, and exposes
+// runs), deploys CrowdFund wired to a plain recipient address, and exposes
 // contribute / advanceTime / execute / withdraw plus a snapshot of the campaign.
 //
 // State-changing calls go through tevm's native action, not viem's writeContract:
@@ -21,9 +21,9 @@ import { compileContracts } from "~~/lib/solc";
 
 export type Deployment = {
   crowdFundAddress: `0x${string}`;
+  /** plain EOA the funds forward to on success (no recipient contract anymore) */
   recipientAddress: `0x${string}`;
   crowdFundAbi: Abi;
-  recipientAbi: Abi;
   sourceKey: string;
 };
 
@@ -52,6 +52,8 @@ export function useChainRuntime() {
   const client = useMemo(() => createMemoryClient({ miningConfig: { type: "auto" } }), []);
   const deployer = useMemo(() => PREFUNDED_ACCOUNTS[0], []);
   const learner = useMemo(() => PREFUNDED_ACCOUNTS[1], []);
+  // the campaign's funding recipient — just an address the funds forward to
+  const recipient = useMemo(() => PREFUNDED_ACCOUNTS[2], []);
 
   const [deployment, setDeployment] = useState<Deployment | null>(null);
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
@@ -78,8 +80,8 @@ export function useChainRuntime() {
           args: [],
         }) as Promise<boolean>,
         client.readContract({
-          address: d.recipientAddress,
-          abi: d.recipientAbi,
+          address: d.crowdFundAddress,
+          abi: d.crowdFundAbi,
           functionName: "completed",
           args: [],
         }) as Promise<boolean>,
@@ -113,7 +115,7 @@ export function useChainRuntime() {
   const ensureDeployed = useCallback(
     async (sources: Record<string, string>): Promise<Deployment> => {
       const full = completedSources(sources as Record<SolFile, string>);
-      const sourceKey = full["CrowdFund.sol"] + " " + full["FundingRecipient.sol"];
+      const sourceKey = full["CrowdFund.sol"];
       if (deployRef.current && deployRef.current.sourceKey === sourceKey) return deployRef.current;
 
       setBusy(true);
@@ -121,24 +123,13 @@ export function useChainRuntime() {
       try {
         const res = await compileContracts(full);
         if (!res.ok) throw new Error(res.errors[0] ?? "compile failed");
-        const recipient = res.contracts["FundingRecipient"];
         const crowdFund = res.contracts["CrowdFund"];
-        if (!recipient || !crowdFund) throw new Error("expected CrowdFund and FundingRecipient contracts");
-
-        const rHash = await client.deployContract({
-          abi: recipient.abi as Abi,
-          bytecode: recipient.bytecode,
-          args: [],
-          account: deployer,
-          chain: null,
-        });
-        const recipientAddress = (await client.waitForTransactionReceipt({ hash: rHash }))
-          .contractAddress as `0x${string}`;
+        if (!crowdFund) throw new Error("expected CrowdFund contract");
 
         const cHash = await client.deployContract({
           abi: crowdFund.abi as Abi,
           bytecode: crowdFund.bytecode,
-          args: [recipientAddress],
+          args: [recipient.address],
           account: deployer,
           chain: null,
         });
@@ -147,9 +138,8 @@ export function useChainRuntime() {
 
         const next: Deployment = {
           crowdFundAddress,
-          recipientAddress,
+          recipientAddress: recipient.address as `0x${string}`,
           crowdFundAbi: crowdFund.abi as Abi,
-          recipientAbi: recipient.abi as Abi,
           sourceKey,
         };
         deployRef.current = next;
@@ -163,7 +153,7 @@ export function useChainRuntime() {
         setBusy(false);
       }
     },
-    [client, deployer, refresh],
+    [client, deployer, recipient.address, refresh],
   );
 
   const run = useCallback(

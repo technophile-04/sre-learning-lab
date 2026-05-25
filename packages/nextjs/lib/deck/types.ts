@@ -6,7 +6,7 @@
 // YOUR TURN, …); `tier2` is the faint Sanskrit word behind it (sutra, lekhana,
 // …). tier2 is decorative — never load-bearing for comprehension.
 
-export type SolFile = "CrowdFund.sol" | "FundingRecipient.sol";
+export type SolFile = "CrowdFund.sol";
 
 type CardBase = {
   id: string;
@@ -48,6 +48,12 @@ export type YourTurnCard = CardBase & {
   placeholder: string;
   /** the reference solution that always threads forward if the learner is wrong */
   canonical: string;
+  /** optional second box — ask the learner to explain their reasoning in prose.
+   *  graded Socratically against the rubric (non-blocking, like a THINK card). */
+  explain?: {
+    prompt: string;
+    rubricConcepts: string[];
+  };
 };
 
 /** THINK · prashna — open-ended Socratic question, AI-graded against keyword

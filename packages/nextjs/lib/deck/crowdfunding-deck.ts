@@ -30,20 +30,17 @@ That pattern is everywhere on Ethereum. People who have no reason to trust each 
     type: "think",
     tier1: "THINK",
     tier2: "prashna",
-    title: "Who keeps everyone honest",
+    title: "What if you turn greedy",
     question:
-      "Nobody contributing has to trust you or each other. So what actually stops the rules from changing halfway through, once people's money is already in?",
+      "You wrote this contract and you're the one deploying it. A contributor worries that once their ETH is in, you'll quietly change the rules to send the whole pot to yourself. What can you honestly tell them about your own power over the contract after it's live?",
     rubricConcepts: [
-      "smart contract",
-      "code",
-      "rules",
-      "enforced",
-      "deployed",
-      "can't change",
-      "on-chain",
-      "trustless",
+      "even the creator has no special power once it's deployed",
+      "there's no owner or admin key to change the rules",
+      "the deployed code is fixed and can't be edited",
+      "the only way you could cheat is a backdoor written before deploy",
+      "they can read the code before contributing",
     ],
-    hint: "Think about what can and can't happen to a contract after it's deployed, and who has the power to touch it.",
+    hint: "Once it's deployed, what could you actually do to it? Do you have any access the contributors don't?",
   },
   {
     id: "shape",
@@ -53,8 +50,8 @@ That pattern is everywhere on Ethereum. People who have no reason to trust each 
     title: "The shape of it",
     file: "CrowdFund.sol",
     fromAnchor: "constructor(address fundingRecipientAddress)",
-    toAnchor: "fundingRecipient = FundingRecipient(fundingRecipientAddress);",
-    note: `Here's the contract you'll fill in, a piece at a time. It's grouped into sections: errors and state variables near the top, then the constructor, then the functions, which are empty shells right now. The one thing already wired is \`fundingRecipient\` — the contract that receives the money if the campaign succeeds. Everything else, you'll write.`,
+    toAnchor: "fundingRecipient = fundingRecipientAddress;",
+    note: `Here's the contract you'll fill in, a piece at a time. It's grouped into sections: errors and state variables near the top, then the constructor, then the functions, which are empty shells right now. The one thing already wired is \`fundingRecipient\` — the address that receives the money if the campaign succeeds. Everything else, you'll write.`,
   },
   {
     id: "tracking",
@@ -64,7 +61,7 @@ That pattern is everywhere on Ethereum. People who have no reason to trust each 
     title: "Tracking who gave what",
     body: `The contract can't just remember the total that came in. It needs to know how much each person put in, individually. The reason is the refund case: if the campaign fails, everyone has to get back exactly what they contributed, no more and no less. You can't do that from a single total.
 
-The tool for this in Solidity is a **mapping**. Think of it as a dictionary that links each contributor's address to the amount they've sent. Every address starts at zero by default, so you don't have to set anyone up ahead of time. And when someone contributes more than once, you want their amounts to add up, not overwrite, otherwise their earlier money would vanish from the records.`,
+The tool for this in Solidity is a **mapping** — a key-value store, like a dictionary. Every key starts at zero by default, so nobody has to be set up ahead of time. The next card is where you'll work out exactly what to map to what.`,
   },
   {
     id: "balances",
@@ -74,31 +71,31 @@ The tool for this in Solidity is a **mapping**. Think of it as a dictionary that
     title: "Track the balances",
     file: "CrowdFund.sol",
     slot: "__BALANCES__",
-    prompt: `Add a state variable: a mapping from each contributor's \`address\` to the \`uint256\` amount they've put in. Make it \`public\` so the frontend can read it, and call it \`balances\`.`,
-    placeholder: "mapping(address => uint256) public /* name it */;",
-    canonical: CANONICAL.__BALANCES__,
-  },
-  {
-    id: "events-idea",
-    type: "concept",
-    tier1: "THE IDEA",
-    tier2: "sutra",
-    title: "Telling the outside world",
-    body: `Your contract lives on-chain. The frontend that people actually click on lives off-chain, in a browser. Those two worlds don't share memory, so the contract needs a way to tell the outside world when something happened.
+    prompt: `A mapping points one thing at another. You may have seen \`mapping(uint256 => address) public tokenOwner\` in an NFT: give it a token id and it hands back the owner, so \`tokenOwner[1]\` is the address that owns token #1. The key is the id, the value is the address.
 
-That's what **events** are for. An event is a little log entry the contract emits during a transaction, and anything off-chain can listen for it. When someone contributes, you emit an event, and the frontend hears it and updates the screen. Without events, the frontend would have to keep asking the contract "anything new? anything new?" over and over, which is slow and wasteful.`,
+Now your turn. You need the opposite shape. For any contributor's \`address\`, you want to look up the total ETH they've put in. So what's the key, and what's the value? Write the state variable, make it \`public\` so the frontend can read it, and name it \`balances\`.`,
+    placeholder: "mapping(/* key? */ => /* value? */) public balances;",
+    canonical: CANONICAL.__BALANCES__,
+    explain: {
+      prompt: `One line: why is the contributor's \`address\` the key and the amount the value, and not the other way around?`,
+      rubricConcepts: [
+        "you look things up by the contributor's address",
+        "the address is who, the amount is what they gave",
+        "you need to find a given person's balance",
+        "key is what you search by",
+        "address points to their amount",
+      ],
+    },
   },
   {
-    id: "event",
-    type: "your-turn",
-    tier1: "YOUR TURN",
-    tier2: "lekhana",
-    title: "Announce a contribution",
+    id: "balances-added",
+    type: "code",
+    tier1: "THE CODE",
+    tier2: "darshan",
+    title: "It's in the contract now",
     file: "CrowdFund.sol",
-    slot: "__EVENT__",
-    prompt: `Declare an event called \`Contribution\` that carries the two things a listener would care about: the \`address\` of the contributor and the \`uint256\` amount they sent.`,
-    placeholder: "event Contribution(/* who, and how much? */);",
-    canonical: CANONICAL.__EVENT__,
+    fromAnchor: "public balances",
+    note: `That's your \`balances\` mapping sitting with the rest of the state. Every address reads as zero until they contribute, and you'll add to it each time someone does.`,
   },
   {
     id: "payable-idea",
@@ -108,7 +105,7 @@ That's what **events** are for. An event is a little log entry the contract emit
     title: "Taking the money in",
     body: `For a function to actually receive ETH, you have to mark it \`payable\`. Without that keyword, the contract rejects any ETH sent to it. The \`contribute()\` function is already marked payable, so it's ready to accept money.
 
-Inside any function you also get two things straight from the transaction itself. \`msg.sender\` is the address that called the function, and \`msg.value\` is how much ETH they attached. Neither can be faked, they come from the signed transaction. So recording a contribution is really just: take \`msg.value\`, add it to \`msg.sender\`'s entry in the mapping, and announce it.`,
+Inside any function you also get two things straight from the transaction itself. \`msg.sender\` is the address that called the function, and \`msg.value\` is how much ETH they attached. Neither can be faked, they come from the signed transaction. So recording a contribution is really just: take \`msg.value\` and add it to \`msg.sender\`'s entry in the mapping.`,
   },
   {
     id: "contribute",
@@ -118,9 +115,29 @@ Inside any function you also get two things straight from the transaction itself
     title: "Write contribute()",
     file: "CrowdFund.sol",
     slot: "__CONTRIBUTE__",
-    prompt: `Two lines. Add the sender's \`msg.value\` to their balance in the mapping (remember: add, don't overwrite). Then emit the \`Contribution\` event with the sender and the amount.`,
-    placeholder: "balances[msg.sender] += msg.value;\n// then announce it with the event",
+    prompt: `One line. Add the sender's \`msg.value\` to their balance in the mapping. Remember to add, not overwrite, so repeat contributions stack instead of erasing the earlier ones.`,
+    placeholder: "balances[msg.sender] += /* the amount they sent */;",
     canonical: CANONICAL.__CONTRIBUTE__,
+    explain: {
+      prompt: `Why \`+=\` and not just \`=\` here?`,
+      rubricConcepts: [
+        "= would overwrite their earlier contribution",
+        "+= adds to what's already there",
+        "someone can contribute more than once",
+        "their previous amount has to survive",
+        "you accumulate, not replace",
+      ],
+    },
+  },
+  {
+    id: "contribute-added",
+    type: "code",
+    tier1: "THE CODE",
+    tier2: "darshan",
+    title: "There's contribute()",
+    file: "CrowdFund.sol",
+    fromAnchor: "balances[msg.sender] += msg.value",
+    note: `One line, and \`contribute()\` does its whole job: take whatever ETH came in and add it to the sender's running total.`,
   },
   {
     id: "try-contribute",
@@ -151,7 +168,13 @@ The fix is an ordering rule, sometimes called Checks, Effects, Interactions. Fir
     title: "Why empty the balance first",
     question:
       "Why does it matter so much that you set someone's balance to zero before you send them their ETH, instead of after? What goes wrong if you flip those two lines?",
-    rubricConcepts: ["reentrancy", "re-enter", "call again", "drain", "attack", "before", "state", "zero"],
+    rubricConcepts: [
+      "the address you pay can be a contract that runs code on receipt",
+      "it calls back into withdraw before your state has updated",
+      "if the balance isn't zero yet it can withdraw again and again",
+      "zeroing first means there's nothing left to re-take",
+      "this is reentrancy, the same shape as the DAO hack",
+    ],
     hint: "Picture the person you're paying being a contract that runs code the instant it gets ETH, and that code calls withdraw again.",
   },
   {
@@ -165,6 +188,26 @@ The fix is an ordering rule, sometimes called Checks, Effects, Interactions. Fir
     prompt: `Refunds shouldn't be allowed while the campaign is still running, only once it's failed. Add a \`public\` boolean called \`openToWithdraw\` to track that. It defaults to \`false\`, which is what you want.`,
     placeholder: "bool public /* name the flag */;",
     canonical: CANONICAL.__OPEN_TO_WITHDRAW__,
+    explain: {
+      prompt: `Why does this flag start out \`false\` instead of \`true\`?`,
+      rubricConcepts: [
+        "refunds must be closed while the campaign is still running",
+        "withdrawals should only open once it fails",
+        "false is the safe default",
+        "you don't want people pulling out mid-campaign",
+        "execute is what flips it to true on failure",
+      ],
+    },
+  },
+  {
+    id: "open-to-withdraw-added",
+    type: "code",
+    tier1: "THE CODE",
+    tier2: "darshan",
+    title: "The refund switch",
+    file: "CrowdFund.sol",
+    fromAnchor: "bool public openToWithdraw",
+    note: `\`openToWithdraw\` sits with the rest of the state, starting at \`false\`. Nothing flips it except your own code, once the campaign has failed.`,
   },
   {
     id: "withdraw",
@@ -174,10 +217,30 @@ The fix is an ordering rule, sometimes called Checks, Effects, Interactions. Fir
     title: "Write withdraw()",
     file: "CrowdFund.sol",
     slot: "__WITHDRAW__",
-    prompt: `Follow the ordering rule. First, if \`openToWithdraw\` is false, revert with \`NotOpenToWithdraw\`. Then read the caller's balance into a local variable and set their stored balance to zero. Only then send them the ETH with \`msg.sender.call{value: ...}("")\`, and revert with \`WithdrawTransferFailed\` if it didn't succeed. (The errors are already declared up top.)`,
+    prompt: `Follow the ordering rule. First, if \`openToWithdraw\` is false, revert with \`NotOpenToWithdraw\`. Then read the caller's balance into a local variable and set their stored balance to zero. Only then send them the ETH with \`msg.sender.call{value: ...}("")\`, and revert with \`TransferFailed\` if it didn't succeed. (The errors are already declared up top.)`,
     placeholder:
       "if (!openToWithdraw) revert NotOpenToWithdraw();\n\nuint256 balance = balances[msg.sender];\n// zero it out, then send, then check success",
     canonical: CANONICAL.__WITHDRAW__,
+    explain: {
+      prompt: `Why read the balance into a local variable before you zero the stored one?`,
+      rubricConcepts: [
+        "you still need the amount to actually send after zeroing storage",
+        "if you zeroed first without saving it you'd send nothing",
+        "keep the value in memory, clear the record on chain",
+        "the local copy survives the state change",
+      ],
+    },
+  },
+  {
+    id: "withdraw-added",
+    type: "code",
+    tier1: "THE CODE",
+    tier2: "darshan",
+    title: "Refunds, in order",
+    file: "CrowdFund.sol",
+    fromAnchor: "function withdraw()",
+    toAnchor: "revert TransferFailed(msg.sender, balance);",
+    note: `Check, then effect, then interaction: confirm withdrawals are open, zero the balance, and only then send. By the time the ETH leaves, there's nothing left for a re-entering contract to claim.`,
   },
   {
     id: "state-machine",
@@ -201,6 +264,27 @@ There's a catch that trips up everyone new to smart contracts: a contract can't 
     placeholder:
       "uint256 public deadline = block.timestamp + /* how long? */;\nuint256 public constant threshold = /* the goal */;",
     canonical: CANONICAL.__DEADLINE_THRESHOLD__,
+    explain: {
+      prompt: `Why can \`threshold\` be a \`constant\` but \`deadline\` can't?`,
+      rubricConcepts: [
+        "threshold is a fixed value known ahead of time",
+        "deadline depends on block.timestamp at deploy",
+        "a constant is baked in when the code compiles",
+        "deadline is computed at construction, not compile time",
+        "you can't make a runtime value constant",
+      ],
+    },
+  },
+  {
+    id: "deadline-threshold-added",
+    type: "code",
+    tier1: "THE CODE",
+    tier2: "darshan",
+    title: "The clock and the goal",
+    file: "CrowdFund.sol",
+    fromAnchor: "uint256 public deadline",
+    toAnchor: "uint256 public constant threshold",
+    note: `The \`deadline\` is locked in the moment the contract deploys, and \`threshold\` is the line the campaign has to clear to count as a win.`,
   },
   {
     id: "execute",
@@ -210,10 +294,31 @@ There's a catch that trips up everyone new to smart contracts: a contract can't 
     title: "Write execute()",
     file: "CrowdFund.sol",
     slot: "__EXECUTE__",
-    prompt: `First, if the deadline hasn't passed yet (\`block.timestamp <= deadline\`), revert with \`TooEarly\`. Then check the result: if the contract's balance reached the \`threshold\`, forward all of it to the recipient with \`fundingRecipient.complete{value: address(this).balance}()\`. Otherwise, set \`openToWithdraw\` to true so contributors can get refunds.`,
+    prompt: `First, if the deadline hasn't passed yet (\`block.timestamp <= deadline\`), revert with \`TooEarly\`. Then check the result: if the contract's balance reached the \`threshold\`, mark the campaign \`completed\` and forward the whole balance to \`fundingRecipient\` with \`fundingRecipient.call{value: address(this).balance}("")\` (revert with \`TransferFailed\` if the send fails). Otherwise, set \`openToWithdraw\` to true so contributors can get refunds.`,
     placeholder:
       "if (block.timestamp <= deadline) revert TooEarly(deadline, block.timestamp);\n\n// if the threshold was met, forward the funds; otherwise open withdrawals",
     canonical: CANONICAL.__EXECUTE__,
+    explain: {
+      prompt: `Why check the deadline and revert first, before doing anything else?`,
+      rubricConcepts: [
+        "the campaign can't settle before it's over",
+        "no one should be able to execute early",
+        "guard first, decide the outcome second",
+        "you only know success or failure once time is up",
+        "checks come before effects",
+      ],
+    },
+  },
+  {
+    id: "execute-added",
+    type: "code",
+    tier1: "THE CODE",
+    tier2: "darshan",
+    title: "The two endings",
+    file: "CrowdFund.sol",
+    fromAnchor: "function execute()",
+    toAnchor: "openToWithdraw = true;",
+    note: `One function, both outcomes. If the goal was met it marks the campaign done and forwards the pot; if not, it opens the door to refunds.`,
   },
   {
     id: "timeleft",
@@ -226,6 +331,26 @@ There's a catch that trips up everyone new to smart contracts: a contract can't 
     prompt: `The frontend wants to show a countdown, so finish \`timeLeft()\`. If the \`deadline\` is still in the future, return how many seconds are left. Otherwise return 0. A ternary does it in one line.`,
     placeholder: "return deadline > block.timestamp ? /* seconds remaining */ : 0;",
     canonical: CANONICAL.__TIMELEFT__,
+    explain: {
+      prompt: `Why return 0 once the deadline has passed, instead of letting the subtraction run?`,
+      rubricConcepts: [
+        "a uint can't go negative",
+        "deadline minus a later timestamp would underflow and revert",
+        "no time left should just read as zero",
+        "you can't represent negative seconds in a uint",
+        "the ternary guards against the underflow",
+      ],
+    },
+  },
+  {
+    id: "timeleft-added",
+    type: "code",
+    tier1: "THE CODE",
+    tier2: "darshan",
+    title: "The countdown",
+    file: "CrowdFund.sol",
+    fromAnchor: "return deadline > block.timestamp",
+    note: `\`timeLeft()\` hands the frontend a clean number: seconds remaining while the campaign runs, and a flat zero once the deadline is behind it.`,
   },
   {
     id: "must-poke",
@@ -236,13 +361,11 @@ There's a catch that trips up everyone new to smart contracts: a contract can't 
     question:
       "The deadline passes and the campaign didn't reach its goal. Why can't contributors just withdraw right then? Why does someone have to call execute() first?",
     rubricConcepts: [
-      "state transition",
-      "trigger",
-      "someone",
-      "can't auto-execute",
-      "no automatic",
-      "transaction",
-      "enable",
+      "a contract can't run code on its own",
+      "nothing happens until a transaction triggers it",
+      "execute is what flips the state and opens withdrawals",
+      "the deadline passing doesn't change any state by itself",
+      "someone has to send the transaction that moves it on",
     ],
     hint: "Remember that a contract can't run code on its own. Nothing happens until a transaction makes it happen.",
   },
@@ -262,7 +385,7 @@ There's a catch that trips up everyone new to smart contracts: a contract can't 
     tier2: "prayoga",
     title: "Let it succeed",
     scenario: "success-forward",
-    body: `Now the other ending. Contribute more than the threshold, let the deadline pass, and call \`execute()\`. This time the money forwards to the recipient and its \`completed\` flag flips to true. Same function, two outcomes, decided entirely by how much came in.`,
+    body: `Now the other ending. Contribute more than the threshold, let the deadline pass, and call \`execute()\`. This time the money forwards to the recipient address and the contract's \`completed\` flag flips to true. Same function, two outcomes, decided entirely by how much came in.`,
   },
   {
     id: "receive-idea",
@@ -285,6 +408,27 @@ Solidity has a special function for this called \`receive()\`. It runs automatic
     prompt: `One line. When ETH arrives with no function specified, just call \`contribute()\` so it gets tracked like any other contribution.`,
     placeholder: "// route a plain transfer into a contribution",
     canonical: CANONICAL.__RECEIVE__,
+    explain: {
+      prompt: `Why route a plain transfer through \`contribute()\` instead of just letting the contract hold the ETH?`,
+      rubricConcepts: [
+        "otherwise that ETH is untracked",
+        "it wouldn't count toward their balance",
+        "there'd be no refund record for it",
+        "contribute does the bookkeeping",
+        "a plain transfer would otherwise be stranded",
+      ],
+    },
+  },
+  {
+    id: "receive-added",
+    type: "code",
+    tier1: "THE CODE",
+    tier2: "darshan",
+    title: "No stranded ETH",
+    file: "CrowdFund.sol",
+    fromAnchor: "receive() external payable",
+    toAnchor: "contribute();",
+    note: `Now a plain transfer to the contract lands in \`contribute()\` like any other, so it gets tracked and stays refundable.`,
   },
   {
     id: "edge-cases",
@@ -294,7 +438,7 @@ Solidity has a special function for this called \`receive()\`. It runs automatic
     title: "Closing the trapdoors",
     body: `Once the happy path works, the real smart-contract thinking starts: what could go wrong? This is where it differs from normal programming. A bug in a web app you can patch tomorrow. A contract is deployed once and can't be changed, so a hole stays open forever.
 
-Here's a concrete one. What if someone sends ETH after the campaign already succeeded and the money was forwarded? That ETH lands in a contract that's done. There's no path to move it out anymore, so it's stuck for good. The way you handle this is with a guard. A **modifier** is a reusable check you attach to a function, and it runs before the function body. You can write one that refuses to run if the recipient is already completed, and attach it to the functions that shouldn't fire after the campaign is over. The goal is to make the bad state impossible to reach, not just unlikely.`,
+Here's a concrete one. What if someone sends ETH after the campaign already succeeded and the money was forwarded? That ETH lands in a contract that's done. There's no path to move it out anymore, so it's stuck for good. The way you handle this is with a guard. A **modifier** is a reusable check you attach to a function, and it runs before the function body. You can write one that refuses to run once the campaign is already completed, and attach it to the functions that shouldn't fire after the campaign is over. The goal is to make the bad state impossible to reach, not just unlikely.`,
   },
   {
     id: "too-late",
@@ -304,7 +448,13 @@ Here's a concrete one. What if someone sends ETH after the campaign already succ
     title: "Money sent too late",
     question:
       "Someone sends ETH to the contract after the campaign already succeeded and the funds were forwarded. What happens to that ETH, and why is there no way to get it back out?",
-    rubricConcepts: ["trapped", "stuck", "no way out", "already completed", "campaign over"],
+    rubricConcepts: [
+      "the ETH is trapped in the contract",
+      "execute already ran and the completed guard stops it running again",
+      "withdraw only refunds tracked contributions, not this stray ETH",
+      "no function left can move that ETH out",
+      "it's stuck permanently",
+    ],
     hint: "Walk through every function that moves ETH out of the contract, and ask whether any of them still works once the campaign is done.",
   },
   {
@@ -315,9 +465,30 @@ Here's a concrete one. What if someone sends ETH after the campaign already succ
     title: "Guard against double-funding",
     file: "CrowdFund.sol",
     slot: "__MODIFIER__",
-    prompt: `Fill in the \`notCompleted\` modifier's guard. If the recipient is already completed (\`fundingRecipient.completed()\`), revert with \`AlreadyCompleted\`. It's already attached to contribute, withdraw, and execute, so once you write this one line, those functions are all protected.`,
-    placeholder: "// revert if the recipient has already been completed",
+    prompt: `Fill in the \`notCompleted\` modifier's guard. If the campaign is already \`completed\`, revert with \`AlreadyCompleted\`. It's already attached to contribute, withdraw, and execute, so once you write this one line, those functions are all protected.`,
+    placeholder: "// revert if the campaign is already completed",
     canonical: CANONICAL.__MODIFIER__,
+    explain: {
+      prompt: `Why write this as a modifier instead of pasting the same check into each function?`,
+      rubricConcepts: [
+        "one place to write it and one place to change it",
+        "it's reused across contribute, withdraw, and execute",
+        "less chance of forgetting it on one function",
+        "keeps the guard consistent everywhere",
+        "avoids repeating yourself",
+      ],
+    },
+  },
+  {
+    id: "modifier-added",
+    type: "code",
+    tier1: "THE CODE",
+    tier2: "darshan",
+    title: "One guard, three doors",
+    file: "CrowdFund.sol",
+    fromAnchor: "modifier notCompleted()",
+    toAnchor: "if (completed) revert AlreadyCompleted();",
+    note: `That one line now guards \`contribute\`, \`withdraw\`, and \`execute\` at once. Once the campaign is completed, none of them will run.`,
   },
   {
     id: "ship-it",
@@ -325,7 +496,7 @@ Here's a concrete one. What if someone sends ETH after the campaign already succ
     tier1: "SHIP IT",
     tier2: "prakashana",
     title: "Deploy it for real",
-    body: `You wrote all of it: tracking contributions, refunding safely, the deadline, the two endings, and the guard. Deploy both contracts to the in-browser chain, the \`FundingRecipient\` first and then the \`CrowdFund\` wired to it, and watch the whole thing come up live.`,
+    body: `You wrote all of it: tracking contributions, refunding safely, the deadline, the two endings, and the guard. Deploy the \`CrowdFund\` contract to the in-browser chain and watch the whole thing come up live.`,
   },
   {
     id: "what-you-built",

@@ -74,7 +74,7 @@ export function Deck() {
             reset
           </button>
           <Link
-            href="/scenes"
+            href="/"
             className="deck-mono"
             style={{ fontSize: 10, letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--ink-faint)" }}
           >
@@ -129,7 +129,7 @@ export function Deck() {
           </div>
         </div>
         {isLast ? (
-          <Link href="/scenes" className="deck-btn deck-btn-primary" style={{ textDecoration: "none" }}>
+          <Link href="/" className="deck-btn deck-btn-primary" style={{ textDecoration: "none" }}>
             finish ✓
           </Link>
         ) : (

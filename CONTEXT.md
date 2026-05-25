@@ -8,6 +8,45 @@ on a single concept (ERC-20) curated from three canonical sources.
 
 ## Resume here (next session)
 
+**LANDED (2026-05-25) — v0.5: the atlas is now the crowdfunding home plate.**
+The crowdfunding pivot (ADR-0004) had reached the deck but not the front door;
+`docs/adr/0006` finished it. The atlas now lives at the home page (`app/page.tsx`),
+reskinned from the cream editorial plate to the Indigo Study Deck palette
+(Instrument Serif / Hanken Grotesk / JetBrains Mono, bone cards on the `#16141d`
+desk, saffron edges, teal for the entry atom). Its node tree was rebuilt from the
+old ERC-20 decomposition (→ uniswap) into a five-atom *crowdfunding* spine derived
+from the deck's concept cards: trustless funding → tracking contributions → taking
+money in (`contribute`) → sending ETH safely (`withdraw`/refund) → state machine
+(`deadline`/`threshold`/`execute`). Only the first atom is `available`
+(→ `/scenes/crowdfunding`); the other four are a locked journey-map. The uniswap
+synthesis node is gone. `app/scenes/page.tsx` is now a server-component redirect to
+`/`; the scaffold-eth boilerplate is deleted; the four `/scenes` back-links
+(`Deck.tsx` ×2, both auth stubs) point to `/`; Header nav unchanged (Home → `/`
+already lands on the atlas). The `direct-/delegated-authorization` stub scenes are
+orphaned routes (reachable by URL, no longer linked) — left in place per ADR-0006.
+
+**Verified (2026-05-25):** `check-types` clean; `/` serves "atlas of crowdfunding"
+and no longer the scaffold-eth boilerplate; `/scenes` → 307 to `/`;
+`/scenes/crowdfunding` still 200. See ADR-0006 for trade-offs (incl. the rejected
+Juicebox/ConstitutionDAO capstone). NOT yet checked in a real browser: the
+reskinned atlas's visual polish + the cream→indigo continuity into the deck.
+
+**Also landed (2026-05-25) — deck pared + made Socratic, code viewer on shiki.**
+Two more chunks (`docs/adr/0007`, `docs/adr/0008`). The crowdfunding deck was pared to
+an in-browser concepts workshop: events removed, and the `FundingRecipient` contract
+removed (`fundingRecipient` is now a plain `address`, `completed` lives on `CrowdFund`,
+single-file compile). Every YOUR TURN card became a **derive→reveal pair** — a derive
+card showing theory + a code input + a reasoning (`explain`) input and NO code block
+(the `!card.explain` gate), then a reveal `CodeCard` showing the line in the contract.
+THINK rubrics moved from keywords to idea-phrases and `who-enforces` was rewritten so it
+can't be answered by parroting. Separately, the deck's code viewer (`CodeBlock.tsx` +
+`deck.css`) got the vocs code-focus behaviour (dim non-focused lines + pure-CSS
+hover-reveal) and real syntax colours via **shiki ^4** with `github-dark-dimmed` (dark
+`#22272e` panel), replacing the hand-rolled tokenizer. Deck is now 35 cards. New hard
+rule (the *content framing* section below + `CLAUDE.md`): all learner-facing copy goes
+through the sandgarden style guide. Full detail + gotchas in the build-log entry at the
+bottom of this file.
+
 **Where we are (as of 2026-05-22) — v0.4: the flashcard deck, taught on
 crowdfunding.** The line-by-line marginalian era (balance-ledger) is retired.
 Within this same pivot the deck was first built on token-vendor and then swapped to
@@ -359,6 +398,25 @@ How to apply:
 - The only exception: pure runtime / non-visual code (workers, EVM wiring, AI route
   handlers). No skill needed for those.
 
+### content framing — always go through the sandgarden style guide
+
+Before writing or editing ANY learner-facing copy in this repo — deck card concept
+prose, YOUR TURN prompts, THINK questions, hints, reveal notes, recap text, microcopy,
+error states — read the sandgarden writing style guide first:
+`/Users/shivbhonde/Documents/shiv/3. Resources/sandgarden-blog-writing-style.md` (it
+lives in Shiv's Obsidian vault, a separate tree from this repo). It is the canonical
+voice reference. This is a hard rule, not a suggestion — also recorded in `CLAUDE.md`.
+
+The bar (full content rules in ADR-0008):
+- Senior-dev-to-junior voice. Lead with the situation, not the definition. No hype, no
+  em dashes, no bold-label paragraphs, no punchline endings.
+- **Derive, don't dictate.** A YOUR TURN prompt poses the problem and gives an analogy;
+  it never states the answer or shows the code. Derive cards render NO code block (the
+  `!card.explain` gate); the code appears only on the following reveal card. Placeholders
+  leave the actual insight blank, e.g. `mapping(/* key? */ => /* value? */) public balances;`.
+- **Questions must test.** A THINK or `explain` question that can be answered by
+  parroting the previous card is a bug. Rubrics are full idea-phrases, not keywords.
+
 ### build progress (running log)
 
 Append-only checklist of what's actually shipped, paired with the matching CONTEXT entries.
@@ -473,5 +531,38 @@ Update this section every time a meaningful chunk lands or a decision changes.
 - [ ] **week 3 — verify + close the loop** — runtime-verify the marginalian
       (tool round-trip + auto-greet), wire atom-completion → `localStorage` →
       React Flow node state, vercel deploy.
-</content>
-</invoke>
+- [x] **2026-05-25 — v0.5: atlas → home, vocs-style code focus, deck pared to a
+      concepts workshop + Socratic derive→reveal.** Three chunks landed (ADRs 0006 / 0007 / 0008):
+      **(1) Atlas is the home page** (ADR-0006). `app/scenes/page.tsx` reskinned cream →
+      Indigo Study Deck and rebuilt from the ERC-20 tree (→ uniswap) into a 5-atom
+      *crowdfunding* spine; promoted to `app/page.tsx`, boilerplate deleted, `/scenes` → `/`
+      redirect, back-links + Header repointed, uniswap synthesis node dropped.
+      **(2) Vocs-style code focus + real syntax colours.** The deck CodeBlock already dimmed
+      non-focused lines; added the missing pure-CSS hover-reveal (`.vox:hover`, matching
+      vocs). Then swapped the hand-rolled tokenizer for **shiki ^4** with `github-dark-dimmed`
+      (the theme vocs ships) — colours now inline from the library, the seven `.cb-*` colour
+      classes deleted, code panel went dark (`#22272e` slate inset in the bone card). A
+      module-scope singleton highlighter keeps tokenizing synchronous after first load (no
+      flash, no hydration mismatch). Write-cards now dim too (hover reveals full context).
+      Gotcha: vocs' "blur" is actually `opacity: 0.3`, not `filter: blur`. Vault research at
+      `3. Resources/vocs-code-focus-effect.md`.
+      **(3) Deck pared + made Socratic** (ADR-0007, ADR-0008). Dropped events and the
+      `FundingRecipient` contract — `fundingRecipient` is a plain `address`, `completed` lives
+      on `CrowdFund`, single-file compile (gotcha: `.call{value:}` works on a plain `address`,
+      not just `payable`). Reworked every YOUR TURN into a derive→reveal pair: the derive card
+      shows theory + a code input + a reasoning input and NO code block (`!card.explain` gate);
+      the reveal card shows the line in the contract. THINK rubrics tightened from keywords to
+      idea-phrases; `who-enforces` rewritten so it can't be answered by parroting the prior
+      card. Deck 27 → 35 cards. New standing rule (this file + `CLAUDE.md`): all learner-facing
+      copy goes through the sandgarden style guide.
+      **Verified:** `check-types` clean throughout; a headless `solc 0.8.x` compile of the
+      fully-filled contract = 0 errors / 0 warnings; `/`, `/scenes` (→ 307 `/`), and
+      `/scenes/crowdfunding` all serve 200. **Not yet browser-verified:** the reskinned atlas
+      visuals, the in-browser compile/deploy of the simplified contract, and AI grading on the
+      new derive `explain` boxes + sharpened THINK cards (needs `OPENROUTER_API_KEY`).
+      Also fixed pre-existing EOF corruption (stray `</content></invoke>` tags).
+      **Runtime follow-up:** browser TRY IT reverted with `Source "FundingRecipient.sol"
+      not found` — `deck-store` persists `sources` in localStorage, so open clients kept
+      the old skeleton (with the dead import). Added `version: 1` + a `migrate` that
+      re-seeds `sources` from the current skeleton; bump the version on any future
+      skeleton change. (See ADR-0007 gotchas.)
