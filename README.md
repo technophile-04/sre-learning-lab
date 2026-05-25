@@ -62,18 +62,41 @@ Start at `/` and click through. The two that matter for a walkthrough are the ho
 
 ## How it fits together
 
-The one decision that explains the rest: the learner's contract compiles and runs entirely in the browser. solc runs in a web worker, the chain is tevm (an in-memory EVM), and both reset on reload. So there's no backend to stand up, no testnet, no deploy step. The only server-side code in the whole experience is the grader, and the only secret it needs is the OpenRouter key. That's why the quickstart is this short.
+One bet shapes the whole thing: the learner's contract compiles and runs in the browser. solc runs in a web worker, the chain is tevm (an in-memory EVM), and both reset on reload. So the only server-side code is the grader, and the only secret it needs is the OpenRouter key.
 
-Everything lives in `packages/nextjs`:
+Everything we built lives in `packages/nextjs`. If you open just two files: `lib/deck/crowdfunding-deck.ts` is the entire lesson (every prompt and card), and `_components/cards.tsx` is what renders each card.
 
-- `lib/deck/` is the curriculum. `crowdfunding-deck.ts` is the card array, the actual lesson, authored in the sandgarden voice. `crowdfunding-contracts.ts` is the `CrowdFund.sol` skeleton with `__SLOT__` tokens where the learner writes, the canonical fill for each slot, and helpers (`fillSlot`, `isComplete`, `completedSources`) that thread the learner's code into the contract as they progress. `types.ts` is the card union (concept, code, your-turn, think, try-it, ship-it, recap).
-- `lib/solc.ts` and `lib/solc-worker.ts` compile Solidity in the browser.
-- `app/scenes/crowdfunding/_components/useChainRuntime.ts` deploys to tevm and drives contribute / execute / withdraw, plus an `advanceTime` that mines past the deadline.
-- `services/store/deck-store.ts` keeps progress and the running source in localStorage. If you change the contract skeleton, bump its `version` so old saved source doesn't break the compile.
-- `app/api/grade/route.ts` is the grader. It takes the learner's answer plus the reference, asks the model for a verdict and a line or two of feedback, and returns `{ verdict, feedback }`.
-- `app/scenes/crowdfunding/_components/{Deck,cards,CodeBlock,CodeInput}.tsx` and `deck.css` are the UI. `CodeBlock` is the read-only viewer (Shiki, dimmed dark panel, the vocs-style focus effect), `CodeInput` is the editable box (CodeMirror with the Solidity grammar).
+```
+packages/nextjs/
+├── app/
+│   ├── page.tsx                      # home: the atlas (crowdfunding split into 5 atoms)
+│   ├── lab/page.tsx                  # sandbox: type Solidity, compile, deploy. proves the runtime
+│   ├── scenes/crowdfunding/          # the deck (the actual experience)
+│   │   ├── page.tsx                  # route entry, mounts <Deck/>
+│   │   ├── deck.css                  # all deck styling (bone cards, dark code panels, palette)
+│   │   └── _components/
+│   │       ├── Deck.tsx              # deck shell: paging, progress bar, back/next
+│   │       ├── cards.tsx             # the 7 card faces + grading hook  <- the card components
+│   │       ├── CodeBlock.tsx         # read-only code viewer (Shiki, dark panel, focus effect)
+│   │       ├── CodeInput.tsx         # editable code box (CodeMirror + Solidity, the ✎ editor tab)
+│   │       ├── useChainRuntime.ts    # in-browser chain (tevm): deploy, contribute/execute/withdraw
+│   │       ├── highlighter.ts        # Shiki singleton (github-dark-dimmed)
+│   │       ├── card-meta.ts          # per-card-type metadata (Devanagari watermark, naming)
+│   │       └── fonts.ts              # Instrument Serif / Hanken Grotesk / JetBrains Mono
+│   └── api/grade/route.ts            # the grader (OpenRouter): answer + reference -> {verdict, feedback}
+├── lib/
+│   ├── deck/                         # the lesson + the contract it builds
+│   │   ├── crowdfunding-deck.ts      # THE LESSON: all 35 cards, every prompt lives here
+│   │   ├── crowdfunding-contracts.ts # CrowdFund.sol skeleton with __SLOT__ blanks + canonical fills
+│   │   └── types.ts                  # the card union (fields per card type)
+│   ├── solc.ts                       # compile API the UI calls
+│   ├── solc-worker.ts                # runs solc off the main thread (web worker)
+│   └── oz-sources.ts                 # OpenZeppelin sources, kept for future challenges
+└── services/store/
+    └── deck-store.ts                 # persisted progress + running contract source (zustand)
+```
 
-The why behind each choice is written up as ADRs in `docs/adr/`, and `CONTEXT.md` is the running source of truth. Start at its "Resume here" section if you want to pick up where the build left off.
+The reasoning behind each choice is in `docs/adr/`, and `CONTEXT.md` is the running source of truth.
 
 ## What a run feels like
 
