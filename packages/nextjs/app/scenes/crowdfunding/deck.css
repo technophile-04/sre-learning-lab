@@ -278,6 +278,95 @@
   box-shadow: 0 0 0 3px var(--saffron-wash);
 }
 
+/* editable solidity input (YOUR TURN code box) — CodeMirror on the same dark
+ * github-dark-dimmed ground as the read panel (.codeblock), so reading and
+ * writing share a surface. The difference that signals "you can edit this":
+ * read panels are ENGRAVED into the bone card (inset shadow); this box is
+ * LIFTED off it (raised drop shadow) and wears an editor-tab header (✎ your
+ * line). Token colors come from the github-dark theme inside CodeInput.tsx. */
+.deck-code-input {
+  margin-top: 14px;
+  border: 1px solid #1b2026;
+  border-left: 2px solid var(--saffron);
+  border-radius: 7px;
+  overflow: hidden;
+  /* lifted off the page — shadow tinted with the desk indigo (#16141d), not
+   * pure black, so it sits naturally on the bone card. */
+  box-shadow:
+    0 10px 24px -12px rgba(22, 20, 29, 0.5),
+    0 3px 8px -3px rgba(22, 20, 29, 0.32);
+  transition:
+    box-shadow 180ms ease,
+    transform 180ms ease;
+}
+.deck-code-input:focus-within {
+  /* engaging lifts it a touch more AND lights the saffron ring (augment, not
+   * replace — focus should feel physical) */
+  border-left-color: var(--saffron-deep);
+  transform: translateY(-1px);
+  box-shadow:
+    0 16px 32px -12px rgba(22, 20, 29, 0.55),
+    0 4px 10px -3px rgba(22, 20, 29, 0.34),
+    0 0 0 3px var(--saffron-wash);
+}
+
+/* editor-tab header — explicit "this is yours to write" affordance. Warm-dark
+ * gradient so it reads as distinctly NOT the neutral read panel. */
+.dci-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 12px;
+  background: linear-gradient(180deg, #241e18, #1d2026);
+  border-bottom: 1px solid #14181d;
+  font-family: var(--font-mono), monospace;
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  user-select: none;
+  transition: background 180ms ease;
+}
+.dci-pencil {
+  color: var(--saffron);
+  font-size: 12px;
+  line-height: 1;
+}
+.dci-label {
+  color: #adbac7;
+}
+.dci-hint {
+  margin-left: auto;
+  color: #6e7681;
+  font-size: 9.5px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  transition: color 180ms ease;
+}
+.deck-code-input:focus-within .dci-head {
+  background: linear-gradient(180deg, #2c2317, #1f2228);
+}
+.deck-code-input:focus-within .dci-pencil {
+  filter: drop-shadow(0 0 5px rgba(224, 145, 58, 0.55));
+}
+.deck-code-input:focus-within .dci-hint {
+  color: var(--saffron);
+}
+
+/* editor body */
+.deck-code-input .cm-editor {
+  background: #22272e;
+  font-size: 13px;
+}
+.deck-code-input .cm-editor.cm-focused {
+  outline: none;
+}
+.deck-code-input .cm-content {
+  font-family: var(--font-mono), monospace;
+  padding: 9px 0;
+}
+.deck-code-input .cm-line {
+  padding-left: 14px;
+}
+
 /* verdict chips */
 .verdict-pass {
   color: var(--teal);

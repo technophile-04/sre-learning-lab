@@ -5,6 +5,7 @@
 // against /api/grade; try-it/ship-it drive the in-browser chain.
 import { useEffect, useRef, useState } from "react";
 import { CodeBlock } from "./CodeBlock";
+import { CodeInput } from "./CodeInput";
 import { DEVANAGARI } from "./card-meta";
 import type { Deployment, Snapshot } from "./useChainRuntime";
 import { isComplete } from "~~/lib/deck/crowdfunding-contracts";
@@ -228,14 +229,7 @@ function YourTurn({ card }: { card: YourTurnCard }) {
           it from the theory alone, then meets it in the contract on the next
           (reveal) card. plain your-turn cards still show the slot in context. */}
       {!card.explain && <CodeBlock source={sources[card.file]} fromAnchor={`/*${card.slot}*/`} />}
-      <textarea
-        className="deck-input"
-        spellCheck={false}
-        rows={Math.max(2, draft.split("\n").length)}
-        value={draft}
-        onChange={e => setDraft(e.target.value)}
-        style={{ width: "100%", marginTop: 14, padding: "10px 12px" }}
-      />
+      <CodeInput value={draft} onChange={setDraft} />
       {card.explain && (
         <>
           <p className="rich-p" style={{ marginTop: 16, marginBottom: 6, fontSize: 14 }}>
