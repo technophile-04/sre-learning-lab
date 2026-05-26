@@ -458,3 +458,587 @@
   margin-right: 14px;
   user-select: none;
 }
+
+/* ── shell: journey panel + deck column ───────────────────────────────────── */
+/* on wide screens the journey panel sits in the left margin; the deck stays
+ * centered inside the remaining width (so it doesn't shift around when the
+ * panel mounts). on mobile the panel folds into a top sheet. */
+.deck-shell {
+  display: flex;
+  align-items: stretch;
+  min-height: 100vh;
+  position: relative;
+  z-index: 1;
+}
+.deck-main {
+  flex: 1;
+  min-width: 0;
+}
+/* the nav opener button: shown by default on mobile (panel becomes a top sheet),
+ * and on desktop only when the panel is collapsed (it then expands the panel).
+ * single component, dual behavior driven by the .deck-nav-opener-desktop class
+ * (added in Deck.tsx when the panel is collapsed). */
+.deck-nav-opener {
+  display: none;
+  align-items: center;
+  gap: 10px;
+  margin: 20px 0 0 24px;
+  padding: 8px 12px;
+  border-radius: 7px;
+  background: rgba(245, 240, 228, 0.04);
+  border: 1px solid rgba(245, 240, 228, 0.1);
+  color: var(--card);
+  font-size: 10.5px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition:
+    background 180ms ease,
+    border-color 180ms ease;
+}
+.deck-nav-opener:hover {
+  background: rgba(224, 145, 58, 0.08);
+  border-color: rgba(224, 145, 58, 0.4);
+}
+.deck-nav-opener-count {
+  color: var(--ink-faint);
+  margin-left: 4px;
+  font-variant-numeric: tabular-nums;
+}
+/* desktop-collapsed variant: visible at all viewport widths */
+.deck-nav-opener-desktop {
+  display: inline-flex;
+}
+@media (max-width: 1023px) {
+  .deck-nav-opener {
+    display: inline-flex;
+  }
+}
+
+/* ── journey panel ────────────────────────────────────────────────────────── */
+/* a scholarly book's table of contents in the left margin: serif chapter
+ * titles, mono small-caps tier labels, sanskrit glyph chips, and the saffron
+ * rule + ☞ manicule on the current row — same vocabulary as the code gutter. */
+.jp {
+  width: 288px;
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  align-self: flex-start;
+  max-height: 100vh;
+  overflow-y: auto;
+  padding: 36px 8px 36px 28px;
+  background: linear-gradient(180deg, rgba(245, 240, 228, 0.025), rgba(245, 240, 228, 0));
+  border-right: 1px solid rgba(245, 240, 228, 0.06);
+  z-index: 2;
+  transition:
+    width 280ms cubic-bezier(0.22, 1, 0.36, 1),
+    padding 280ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 220ms ease;
+}
+/* desktop collapsed state — the rail folds away and the deck takes the freed
+ * width. `display: none` would be jumpier; collapsing width + opacity gives a
+ * gentle slide. Below 1024px the panel is a top sheet, so this rule doesn't
+ * apply (the @media block further down forces the layout we want). */
+.jp-collapsed {
+  width: 0;
+  padding-left: 0;
+  padding-right: 0;
+  opacity: 0;
+  pointer-events: none;
+  overflow: hidden;
+  border-right: 0;
+}
+.jp::-webkit-scrollbar {
+  width: 6px;
+}
+.jp::-webkit-scrollbar-thumb {
+  background: rgba(245, 240, 228, 0.08);
+  border-radius: 3px;
+}
+
+.jp-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 22px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid rgba(245, 240, 228, 0.08);
+}
+.jp-head-title {
+  min-width: 0;
+}
+.jp-head-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+.jp-collapse {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: 1px solid rgba(245, 240, 228, 0.14);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink-faint);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    color 180ms ease,
+    border-color 180ms ease,
+    background 180ms ease;
+}
+.jp-collapse:hover {
+  color: var(--card);
+  border-color: rgba(224, 145, 58, 0.45);
+  background: rgba(224, 145, 58, 0.08);
+}
+.jp-collapse:focus-visible {
+  outline: 2px solid var(--saffron-wash);
+  outline-offset: 2px;
+}
+.jp-title {
+  font-size: 22px;
+  font-style: italic;
+  color: var(--card);
+  letter-spacing: 0.005em;
+}
+.jp-subtitle {
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin-top: 4px;
+}
+.jp-count {
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  color: var(--ink-faint);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.jp-count-now {
+  color: var(--saffron);
+}
+.jp-count-sep {
+  margin: 0 4px;
+  opacity: 0.5;
+}
+
+.jp-nav {
+  padding-top: 4px;
+}
+.jp-chapter {
+  padding: 14px 0 6px;
+  animation: jpChapterRise 460ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes jpChapterRise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+/* the chapter heading IS a clickable row: same marker column + hand placement
+ * as a regular row, but bigger type (serif italic title) and a Roman numeral
+ * in place of the type glyph. */
+.jp-chapter-head {
+  position: relative;
+  display: grid;
+  grid-template-columns: 26px 1fr auto;
+  align-items: baseline;
+  gap: 10px;
+  width: 100%;
+  padding: 6px 8px 8px 14px;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background 180ms ease,
+    color 180ms ease;
+}
+.jp-chapter-head:hover {
+  background: rgba(245, 240, 228, 0.04);
+}
+.jp-chapter-head:hover .jp-chapter-title {
+  color: var(--card);
+}
+.jp-chapter-head:hover .jp-marker {
+  background: rgba(224, 145, 58, 0.35);
+}
+.jp-chapter-head:focus-visible {
+  outline: 2px solid var(--saffron-wash);
+  outline-offset: 2px;
+}
+.jp-chapter-num {
+  font-size: 10.5px;
+  letter-spacing: 0.18em;
+  color: var(--saffron-deep);
+  font-variant-numeric: tabular-nums;
+  align-self: center;
+}
+.jp-chapter-title {
+  font-size: 15px;
+  font-style: italic;
+  color: var(--card);
+  margin: 0;
+  font-weight: 400;
+  line-height: 1.32;
+  letter-spacing: 0.005em;
+}
+.jp-chapter-head.jp-row-current .jp-chapter-num {
+  color: var(--saffron);
+}
+.jp-chapter-head.jp-row-current .jp-chapter-title {
+  color: var(--card);
+  font-weight: 500;
+}
+
+.jp-rows {
+  list-style: none;
+  margin: 2px 0 0;
+  padding: 0 0 0 22px;
+  position: relative;
+}
+/* a faint vertical thread links the chapter starter to its supporting cards,
+ * so the indent reads as "these belong to the chapter above" */
+.jp-rows::before {
+  content: "";
+  position: absolute;
+  left: 16px;
+  top: 4px;
+  bottom: 4px;
+  width: 1px;
+  background: rgba(245, 240, 228, 0.07);
+}
+.jp-row {
+  position: relative;
+  display: grid;
+  /* three in-flow children: Devanagari glyph (28px, the sole type signal — the
+   * sanskrit IS the chip), title (fills remaining), optional verdict (auto).
+   * The marker + hand are position:absolute and overlay; they do NOT take grid
+   * columns. */
+  grid-template-columns: 28px 1fr auto;
+  align-items: baseline;
+  column-gap: 10px;
+  width: 100%;
+  padding: 6px 8px 6px 14px;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background 180ms ease,
+    color 180ms ease;
+}
+.jp-row:hover {
+  background: rgba(245, 240, 228, 0.04);
+}
+.jp-row:hover .jp-name {
+  color: var(--card);
+}
+.jp-row:focus-visible {
+  outline: 2px solid var(--saffron-wash);
+  outline-offset: 2px;
+}
+/* the 3px state column (the same metaphor as cm-focus-rule on code) */
+.jp-marker {
+  position: absolute;
+  left: 2px;
+  top: 7px;
+  bottom: 7px;
+  width: 3px;
+  border-radius: 1.5px;
+  background: transparent;
+  transition: background 200ms ease;
+}
+.jp-row:hover .jp-marker {
+  background: rgba(224, 145, 58, 0.35);
+}
+.jp-row-current .jp-marker {
+  background: var(--saffron);
+  box-shadow: 0 0 8px rgba(224, 145, 58, 0.45);
+}
+.jp-hand {
+  position: absolute;
+  left: -14px;
+  top: 4px;
+  color: var(--saffron);
+  font-size: 14px;
+  line-height: 1;
+  pointer-events: none;
+  filter: drop-shadow(0 0 3px rgba(224, 145, 58, 0.45));
+}
+.jp-hand span {
+  display: inline-block;
+  animation: handBob 2.4s ease-in-out infinite;
+}
+/* the Devanagari glyph is now the sole type chip — no English tier1 alongside
+ * it, so it carries the visual weight on its own. Bumped from 11px → 13px,
+ * opacity from 0.7 → 0.78. The English tier1 surfaces as a `title` tooltip on
+ * hover for anyone who hasn't internalised the sanskrit yet. */
+.jp-glyph {
+  font-family: var(--font-deva), serif;
+  font-size: 13px;
+  color: var(--saffron-deep);
+  opacity: 0.78;
+  line-height: 1.1;
+  white-space: nowrap;
+  cursor: help;
+}
+.jp-row-current .jp-glyph {
+  opacity: 1;
+  color: var(--saffron);
+}
+.jp-name {
+  font-size: 12.5px;
+  line-height: 1.35;
+  color: var(--ink-faint);
+  transition: color 180ms ease;
+  /* clamp long titles to two lines */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.jp-row-current .jp-name {
+  color: var(--card);
+  font-weight: 500;
+}
+.jp-verdict {
+  font-size: 11px;
+  line-height: 1;
+  margin-left: 4px;
+  font-family: var(--font-mono), monospace;
+}
+.jp-pass {
+  color: var(--teal);
+}
+.jp-partial {
+  color: var(--saffron-deep);
+}
+.jp-miss {
+  color: var(--ink-faint);
+  opacity: 0.7;
+}
+
+/* mobile: panel becomes a top-down sheet */
+.jp-backdrop {
+  display: none;
+}
+@media (max-width: 1023px) {
+  .jp {
+    position: fixed;
+    inset: 0 0 auto 0;
+    width: 100%;
+    max-height: 80vh;
+    transform: translateY(-100%);
+    transition: transform 380ms cubic-bezier(0.22, 1, 0.36, 1);
+    background: #1c1924;
+    border-right: 0;
+    border-bottom: 1px solid rgba(245, 240, 228, 0.1);
+    box-shadow: 0 24px 60px -28px rgba(0, 0, 0, 0.85);
+    z-index: 30;
+  }
+  .jp-mobile-open {
+    transform: translateY(0);
+  }
+  .jp-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(22, 20, 29, 0);
+    backdrop-filter: blur(0px);
+    transition:
+      background 240ms ease,
+      backdrop-filter 240ms ease;
+    pointer-events: none;
+    z-index: 29;
+  }
+  .jp-backdrop-open {
+    background: rgba(22, 20, 29, 0.5);
+    backdrop-filter: blur(4px);
+    pointer-events: auto;
+  }
+}
+
+/* ── peek code button (in the deck's top bar) ─────────────────────────────── */
+.deck-peek-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 11px 7px 9px;
+  background: rgba(245, 240, 228, 0.04);
+  border: 1px solid rgba(245, 240, 228, 0.12);
+  border-radius: 7px;
+  color: var(--card);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition:
+    background 180ms ease,
+    border-color 180ms ease,
+    transform 140ms ease;
+}
+.deck-peek-btn:hover {
+  background: rgba(224, 145, 58, 0.08);
+  border-color: rgba(224, 145, 58, 0.4);
+}
+.deck-peek-btn:active {
+  transform: translateY(1px);
+}
+.deck-peek-icon {
+  color: var(--saffron);
+  font-size: 12px;
+  line-height: 1;
+  filter: drop-shadow(0 0 4px rgba(224, 145, 58, 0.3));
+}
+.deck-peek-kbd {
+  font-size: 8.5px;
+  letter-spacing: 0;
+  padding: 1px 5px;
+  border: 1px solid rgba(245, 240, 228, 0.18);
+  border-radius: 3px;
+  color: var(--ink-faint);
+  text-transform: lowercase;
+  font-family: var(--font-mono), monospace;
+}
+
+/* ── peek sheet (right-side, lifts a manuscript) ──────────────────────────── */
+.peek-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(22, 20, 29, 0);
+  backdrop-filter: blur(0px);
+  pointer-events: none;
+  transition:
+    background 320ms ease,
+    backdrop-filter 320ms ease;
+  z-index: 40;
+}
+.peek-backdrop-open {
+  background: rgba(22, 20, 29, 0.55);
+  backdrop-filter: blur(6px);
+  pointer-events: auto;
+}
+.peek-sheet {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(560px, 100vw);
+  background: #1a1822;
+  border-left: 1px solid rgba(245, 240, 228, 0.1);
+  box-shadow: -32px 0 80px -32px rgba(0, 0, 0, 0.7);
+  transform: translateX(100%);
+  transition: transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
+  display: flex;
+  flex-direction: column;
+  z-index: 41;
+}
+.peek-sheet-open {
+  transform: translateX(0);
+}
+
+.peek-head {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 22px 16px;
+  border-bottom: 1px solid rgba(245, 240, 228, 0.08);
+}
+.peek-file {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.peek-file-icon {
+  color: var(--saffron);
+  font-size: 14px;
+  line-height: 1;
+  filter: drop-shadow(0 0 4px rgba(224, 145, 58, 0.4));
+}
+.peek-file-name {
+  font-size: 12px;
+  color: var(--card);
+  letter-spacing: 0.04em;
+}
+.peek-status {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+}
+.peek-status-num {
+  color: var(--teal);
+  font-size: 12px;
+  letter-spacing: 0;
+}
+.peek-status-sep {
+  opacity: 0.5;
+  margin: 0 2px;
+}
+.peek-status-total {
+  font-size: 12px;
+  letter-spacing: 0;
+}
+.peek-status-label {
+  margin-left: 6px;
+}
+.peek-close {
+  background: transparent;
+  border: 1px solid rgba(245, 240, 228, 0.14);
+  color: var(--ink-faint);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition:
+    color 180ms ease,
+    border-color 180ms ease;
+}
+.peek-close:hover {
+  color: var(--card);
+  border-color: rgba(245, 240, 228, 0.32);
+}
+.peek-close:focus-visible {
+  outline: 2px solid var(--saffron-wash);
+  outline-offset: 2px;
+}
+
+.peek-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 18px 22px 28px;
+}
+/* the embedded codeblock fills the body and is allowed to be tall; the inner
+ * shiki pre handles its own horizontal scroll. */
+.peek-body .codeblock {
+  background: #22272e;
+}
+
+@media (max-width: 1023px) {
+  .peek-sheet {
+    width: 100vw;
+    border-left: 0;
+  }
+}

@@ -8,6 +8,56 @@ on a single concept (ERC-20) curated from three canonical sources.
 
 ## Resume here (next session)
 
+**LANDED (2026-05-26) — v0.6: the deck is non-linear, the contract is always one click away, and the index leans fully into the sanskrit naming.**
+Two additions from the [[carlos]] review on 2026-05-25, both in `app/scenes/crowdfunding/_components/`.
+**(1) Lesson index (ADR-0009).** A new `JourneyPanel.tsx` sits in the left margin (288px,
+sticky, max-height 100vh) and is **collapsible** (chevron in the panel header collapses; a
+`☰ the path · NN / 35` button in the deck area expands; preference persisted to
+`localStorage` under `deck:panel-collapsed`). Only CONCEPT / SHIP IT / RECAP cards open
+chapters; TRY IT folds under its parent concept's hands-on beat (9 chapters total, not
+fragmented). Each chapter heading IS the starter card's clickable row — Roman numeral on
+the left, serif italic title — so there's no redundant title duplication. Supporting cards
+indent below with a faint vertical thread linking them. Each supporting row is
+**Devanagari glyph + title only** — no English tier-1 label alongside the sanskrit. The
+sanskrit IS the type chip (the philosophy from [[sre-learning-lab-naming-philosophy]]
+applied in earnest); learners absorb the mapping from every deck card's header. Hovering a
+glyph surfaces the English tier-1 as a `title` tooltip for accessibility. Current row
+carries the saffron edge marker + bobbing `☞` (the same hand the code gutter uses). Verdict
+glyphs after the title (`✓` teal pass, `◐` saffron-deep partial, `◌` faint miss) come from
+`deck-store.progress`. Below 1024px the panel folds into a top-down sheet opened by the
+same `☰ the path` button.
+**(2) Code peek (ADR-0010).** A new `CodePeekSheet.tsx` slides in from the right
+(`width: min(560px, 100vw)`, 420ms ease) over a blurred backdrop. The body renders
+`sources['CrowdFund.sol']` through the existing `CodeBlock` — same shiki render, same vox
+dim+hover-reveal, same `☞` — so no new interaction language. If the current card has an
+anchor into the source (CODE: `fromAnchor`/`toAnchor`, YOUR TURN: the `slot` token while
+unfilled, or the canonical line head after fill), the focused range is highlighted and
+scrolled into view on open. Opened from a `peek code` button in the top bar (between
+`reset` and `↩ atlas`) or the `c` shortcut (guarded against `<input>` / `<textarea>` /
+CodeMirror focus). `Esc` and backdrop click close it. Peek open-state is local component
+state in `Deck.tsx`, NOT persisted — UI state doesn't belong in `deck-store`.
+**Shell.** `Deck.tsx` now wraps the existing center column in a `.deck-shell` flex container
+with the journey panel on the left and the deck centered in the remaining space. No changes
+to `useChainRuntime`, the card content, the grader, or the persisted store schema.
+
+**Verified (2026-05-26):** `check-types` clean throughout; `/scenes/crowdfunding` compiles
+and serves 200; no new compile errors (only the pre-existing wagmi/ox tempo warnings).
+**NOT yet browser-verified:** the panel's visual polish, chapter grouping legibility, the
+peek sheet's scroll-into-view on open for YOUR TURN slot anchors after the slot has been
+filled, mobile sheet interactions below 1024px. **Top of the next session:** open
+`/scenes/crowdfunding` in a real browser, walk the deck via the panel, peek the source
+from a few cards (concept, mid-flow YOUR TURN, late TRY IT), test `c` toggle + `Esc` close.
+
+**Deferred to v0.7 (per [[carlos]] 2026-05-25):** the skill-level interview — a short
+conversation up front that figures out which atoms the learner already knows and skips
+them, landing them mid-deck with contrast scaffolding. Bigger lift: a new pre-deck
+surface, a structured-output model call to map "yes I know mappings" → "skip cards 4-6",
+a prerequisite graph between cards (the deck is currently a flat array), and a contrast
+beat at the entry card. Likely wraps in the explain → justify → apply tier framing from
+the [[jeffrey-scholz]] meet (2026-05-08). Vault plan: `2026-05-26-learning-platform-v06-plan.md`.
+
+---
+
 **LANDED (2026-05-25) — v0.5: the atlas is now the crowdfunding home plate.**
 The crowdfunding pivot (ADR-0004) had reached the deck but not the front door;
 `docs/adr/0006` finished it. The atlas now lives at the home page (`app/page.tsx`),
@@ -566,3 +616,49 @@ Update this section every time a meaningful chunk lands or a decision changes.
       the old skeleton (with the dead import). Added `version: 1` + a `migrate` that
       re-seeds `sources` from the current skeleton; bump the version on any future
       skeleton change. (See ADR-0007 gotchas.)
+- [x] **2026-05-26 — v0.6: non-linear lesson index + always-available code peek.**
+      Two additions from the carlos review on 2026-05-25 (ADR-0009, ADR-0010), both in
+      `app/scenes/crowdfunding/_components/`. Three new things touched the codebase:
+      **(1) `JourneyPanel.tsx`** — a left-margin lesson index, **collapsible** (chevron
+      collapses; a `☰ the path · NN / 35` button expands; pref persists to `localStorage`
+      under `deck:panel-collapsed`). Groups the 35 cards into 9 chapters (CONCEPT / SHIP IT
+      / RECAP open chapters — TRY IT folds under its parent concept's hands-on beat, so two
+      adjacent TRY ITs don't fragment the index). Grouping logic lives in the panel, no
+      `chapterId` field on cards. The chapter heading IS the starter card's clickable row
+      (Roman numeral + serif italic title) — supporting cards (CODE / YOUR TURN / THINK /
+      TRY IT) indent below with a faint vertical thread. Supporting rows are
+      **Devanagari glyph + title only** — no English tier-1 label, the sanskrit is the
+      sole type chip (the philosophy from `sre-learning-lab-naming-philosophy.md` in the
+      vault applied in earnest). Hover surfaces the English tier-1 as a `title` tooltip.
+      Current row: saffron edge + the same bobbing `☞` manicule the code gutter uses. Verdict
+      glyphs after the title (`✓` teal, `◐` saffron-deep, `◌` faint). Click → `goTo()`.
+      Below 1024px folds into a top-down sheet opened by the same `☰ the path` button. **(2) `CodePeekSheet.tsx`** — a right-side sheet (`width: min(560px,
+      100vw)`, 420ms slide, blurred backdrop). Renders `sources['CrowdFund.sol']` through
+      the existing `CodeBlock`, so the shiki render, vox dim+hover-reveal, and manicule
+      all carry into the peek with zero new visual language. Anchors-for-current-card:
+      CODE uses `fromAnchor`/`toAnchor` directly; YOUR TURN uses the slot token while
+      unfilled and falls back to the first 20 chars of the canonical line head after the
+      slot has been filled (slot tokens disappear after `fillSlot`); CONCEPT / THINK /
+      RECAP open the sheet scrolled to the top. On open: focus moves to the close button
+      and `requestAnimationFrame` scrolls the focused range into view with `block:
+      "center"`. `Esc` and backdrop click close. Body scroll is locked while open. UI
+      open-state is local component state in `Deck.tsx`, NOT in `deck-store` — UI state
+      doesn't belong in the persisted learning store. **(3) `Deck.tsx` shell rewrite +
+      `deck.css` additions.** The center column is now wrapped in a `.deck-shell` flex
+      container with the panel on the left and the deck centered in the remaining width
+      (so the deck doesn't shift sideways when the panel mounts). New top-bar button
+      `peek code` with the `c` kbd hint (sits between `reset` and `↩ atlas`). Keyboard
+      shortcut: `c` toggles the peek, guarded against `<input>` / `<textarea>` / `.cm-content`
+      focus so it doesn't fire while typing. **Aesthetic anchors:** all new chrome reuses
+      Indigo Study Deck variables (`--saffron`, `--ink-faint`, `--card`, etc.), the
+      existing `handBob` keyframe, the same `cubic-bezier(0.22, 1, 0.36, 1)` motion
+      curve, and the `cm-focus-rule` highlight style. No new design primitives.
+      **Verified:** `check-types` clean; `/scenes/crowdfunding` compiles + serves 200;
+      no new compile errors. **NOT yet browser-verified:** panel's visual polish,
+      chapter grouping legibility, the peek's slot-anchor fallback after the learner
+      has filled a slot, mobile sheet ergonomics below 1024px.
+      **Deferred per ADR-0011-to-come:** the skill-level interview — a pre-deck
+      conversation that lets the learner skip atoms they already know. Bigger lift
+      (new surface, structured-output model call, prerequisite graph between cards
+      that doesn't exist today, contrast scaffolding at the entry card). Vault plan:
+      `2. Areas/sandgarden/updates/2026-05-26-learning-platform-v06-plan.md`.
