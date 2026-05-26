@@ -94,7 +94,7 @@ export async function POST(req: Request) {
 
   const { messages, context } = (await req.json()) as FriendRequestBody;
 
-  const modelId = process.env.OPENROUTER_MODEL ?? DEFAULT_MODEL;
+  const modelId = process.env.OPENROUTER_MODEL || DEFAULT_MODEL;
 
   const result = streamText({
     model: openrouter.chat(modelId),
