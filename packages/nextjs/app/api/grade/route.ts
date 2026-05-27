@@ -83,7 +83,7 @@ export async function POST(req: Request) {
 
   const body = (await req.json()) as GradeRequest;
   const { system, prompt } = body.mode === "think" ? thinkPrompt(body) : yourTurnPrompt(body);
-  const modelId = process.env.OPENROUTER_MODEL ?? DEFAULT_MODEL;
+  const modelId = process.env.OPENROUTER_MODEL || DEFAULT_MODEL;
 
   try {
     const { object } = await generateObject({
