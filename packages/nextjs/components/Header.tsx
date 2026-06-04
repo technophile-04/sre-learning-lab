@@ -59,11 +59,17 @@ export const HeaderMenuLinks = () => {
 export const Header = () => {
   const { targetNetwork } = useTargetNetwork();
   const isLocalNetwork = targetNetwork.id === hardhat.id;
+  const pathname = usePathname();
+  // the deck is a full-screen, immersive experience (and a recording surface), so
+  // hide the app chrome on the crowdfunding routes — same rule as the Footer
+  const isImmersiveDeck = pathname?.startsWith("/scenes/crowdfunding") ?? false;
 
   const burgerMenuRef = useRef<HTMLDetailsElement>(null);
   useOutsideClick(burgerMenuRef, () => {
     burgerMenuRef?.current?.removeAttribute("open");
   });
+
+  if (isImmersiveDeck) return null;
 
   return (
     <div className="sticky lg:static top-0 navbar bg-base-100 min-h-0 shrink-0 justify-between z-20 shadow-md shadow-secondary px-0 sm:px-2">

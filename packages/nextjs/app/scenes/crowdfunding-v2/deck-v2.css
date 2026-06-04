@@ -1,0 +1,915 @@
+/* v2 deck — additive styles only. Base tokens, the bone card, buttons, code
+ * viewer, journey-panel skeleton and tutor styles all come from deck.css +
+ * labs.css (imported alongside this file). Here we add the three-pane workspace,
+ * the forming-contract panel, the gotcha treatment, the type-icon chrome, and the
+ * reentrancy demo. A redder amber than the UI saffron marks the Ethereum traps. */
+.deck-root {
+  --gotcha: #c25a2a;
+  --gotcha-deep: #a8481d;
+  --gotcha-wash: rgba(194, 90, 42, 0.09);
+}
+
+/* ── three-pane shell ─────────────────────────────────────────────────────── */
+.deck-shell-v2 {
+  align-items: stretch;
+}
+.v2-center {
+  display: flex;
+  flex-direction: column;
+}
+.v2-center-col {
+  width: 100%;
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 0 28px;
+}
+/* rail open: no top bar, so give the card a little breathing room from the SE header
+   (the bar normally supplied this gap) without giving back the space it was eating */
+.v2-center-col-open {
+  padding-top: 30px;
+}
+
+/* Pin the deck-stack ghosts to the active card's height (the original deck uses a
+   fixed-height ghost, which juts out below short cards). top:0 is set on .deck-ghost
+   in deck.css; bottom:0 stretches each ghost to the card so the stack peeks a
+   constant sliver under every card regardless of its content length. */
+.deck-shell-v2 .deck-ghost {
+  bottom: 0;
+}
+.v2-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 26px 0 22px;
+  min-height: 64px;
+}
+
+/* collapsed-state breadcrumb: challenge + progress on top, chapter + task below */
+.v2-crumb {
+  display: inline-flex;
+  align-items: center;
+  gap: 13px;
+  max-width: 540px;
+  padding: 6px 10px 6px 6px;
+  margin-left: -6px;
+  border: 0;
+  border-radius: 9px;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  transition: background 160ms ease;
+}
+.v2-crumb:hover {
+  background: rgba(245, 240, 228, 0.045);
+}
+.v2-crumb-grip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  border: 1px solid rgba(245, 240, 228, 0.12);
+  border-radius: 9px;
+  color: var(--ink-faint);
+  font-size: 16px;
+  transition:
+    color 160ms ease,
+    border-color 160ms ease,
+    background 160ms ease;
+}
+.v2-crumb:hover .v2-crumb-grip {
+  color: var(--card);
+  border-color: rgba(224, 145, 58, 0.5);
+  background: var(--saffron-wash);
+}
+.v2-crumb-body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  flex: 1;
+}
+/* context strip — the quiet line: course · section number · section title, with
+   the position pinned to the far right. The section title (the long literary one)
+   truncates here, so it can never clip the task on the line below. */
+.v2-crumb-context {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+  font-size: 11px;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+.v2-crumb-course {
+  color: var(--ink-faint);
+  flex-shrink: 0;
+}
+.v2-crumb-roman {
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  color: var(--saffron);
+  flex-shrink: 0;
+}
+.v2-crumb-section {
+  font-family: var(--font-body), serif;
+  font-size: 13px;
+  text-transform: none;
+  letter-spacing: 0.01em;
+  color: var(--ink-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.v2-crumb-count {
+  margin-left: auto;
+  padding-left: 12px;
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.v2-crumb-count-now {
+  color: var(--saffron);
+}
+/* the loud line — what you're on right now, biggest and brightest, full width */
+.v2-crumb-task {
+  font-size: 20px;
+  line-height: 1.12;
+  color: var(--card);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.v2-credit {
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin-top: 3px;
+}
+.v2-topbar-link {
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  background: none;
+  cursor: pointer;
+  transition: color 160ms ease;
+}
+.v2-topbar-link:hover {
+  color: var(--saffron);
+}
+
+/* right column: always-on contract / tutor */
+.v2-right {
+  width: 430px;
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  align-self: flex-start;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid rgba(245, 240, 228, 0.07);
+  background: linear-gradient(180deg, rgba(245, 240, 228, 0.02), rgba(245, 240, 228, 0));
+}
+.v2-right-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 16px 18px 0;
+  flex-shrink: 0;
+}
+.v2-tab {
+  position: relative;
+  padding: 8px 14px;
+  border: 0;
+  background: none;
+  color: var(--ink-faint);
+  font-size: 10.5px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition:
+    color 160ms ease,
+    border-color 160ms ease;
+}
+.v2-tab:hover {
+  color: var(--card);
+}
+.v2-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.v2-tab-ico {
+  display: inline-flex;
+  align-items: center;
+  opacity: 0.7;
+  transition: opacity 160ms ease;
+}
+.v2-tab:hover .v2-tab-ico,
+.v2-tab-on .v2-tab-ico {
+  opacity: 1;
+}
+/* the AI tutor reads as its own thing: teal accent + a faint spark glow, so it's
+   distinct from the saffron "building" craft surface */
+.v2-tab-tutor .v2-tab-ico {
+  color: var(--teal);
+  font-size: 12px;
+}
+.v2-tab-build.v2-tab-on {
+  color: var(--card);
+  border-bottom-color: var(--saffron);
+}
+.v2-tab-tutor.v2-tab-on {
+  color: var(--card);
+  border-bottom-color: var(--teal);
+}
+.v2-tab-dot {
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--teal);
+  margin-left: 6px;
+  vertical-align: middle;
+  box-shadow: 0 0 0 0 rgba(76, 156, 139, 0.5);
+  animation: numberPulse 1.6s ease infinite;
+}
+/* a single soft saffron border glow that breathes across the whole right panel when
+   a middle-card action lands a panel here — fades in, then eases out and ends fully
+   gone (one swell, never a loop, so it signals without nagging). Replays via a keyed
+   remount in DeckV2. The inset shadow hugs the panel's inner edges, strongest on the
+   left edge facing the card — where the eye is travelling from. */
+.v2-right-glow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 6;
+  animation: rightPanelGlow 1500ms cubic-bezier(0.33, 0, 0.2, 1) forwards;
+}
+@keyframes rightPanelGlow {
+  0% {
+    opacity: 0;
+    box-shadow:
+      inset 0 0 0 1px rgba(224, 145, 58, 0),
+      inset 16px 0 36px -12px rgba(224, 145, 58, 0);
+  }
+  28% {
+    opacity: 1;
+    box-shadow:
+      inset 0 0 0 1px rgba(224, 145, 58, 0.5),
+      inset 16px 0 40px -10px rgba(224, 145, 58, 0.28);
+  }
+  100% {
+    opacity: 0;
+    box-shadow:
+      inset 0 0 0 1px rgba(224, 145, 58, 0),
+      inset 16px 0 40px -10px rgba(224, 145, 58, 0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .v2-right-glow {
+    animation-duration: 1ms;
+  }
+}
+
+.v2-right-body {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding: 14px 16px 18px;
+}
+/* both panels are always mounted; the inactive one is hidden so the BUILDING panel
+   keeps its scroll + ink state across tab switches. The shown panel slides in. */
+.v2-panel {
+  display: none;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+}
+.v2-panel-on {
+  display: flex;
+  animation: panelReveal 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes panelReveal {
+  from {
+    opacity: 0;
+    transform: translateY(7px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ── card kicker (icon + plain label, no tier-2) ──────────────────────────── */
+.v2-kicker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.v2-kicker-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  color: var(--saffron-deep);
+  background: var(--saffron-wash);
+}
+.v2-kicker-icon-gotcha {
+  color: var(--gotcha-deep);
+  background: var(--gotcha-wash);
+}
+.v2-kicker-label {
+  font-size: 10.5px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--saffron-deep);
+}
+.v2-kicker-label-gotcha {
+  color: var(--gotcha-deep);
+}
+
+/* gotcha card: a warning ribbon along the top edge + warm border */
+.card-gotcha {
+  box-shadow:
+    inset 0 3px 0 0 var(--gotcha),
+    0 18px 40px -24px rgba(0, 0, 0, 0.5);
+  border-color: rgba(194, 90, 42, 0.32) !important;
+}
+
+/* "ask Boots" affordance on your-turn / think cards */
+.v2-ask-boots {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border: 1px solid var(--rule);
+  border-radius: 7px;
+  background: rgba(26, 24, 34, 0.02);
+  color: var(--ink-soft);
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition:
+    color 160ms ease,
+    border-color 160ms ease,
+    background 160ms ease;
+}
+.v2-ask-boots:hover {
+  color: var(--saffron-deep);
+  border-color: var(--saffron);
+  background: var(--saffron-wash);
+}
+
+/* run-the-bug demo mount inside the reentrancy concept card */
+.v2-demo-mount {
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px dashed var(--rule);
+}
+.v2-demo-label {
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--gotcha-deep);
+  margin-bottom: 12px;
+}
+
+/* ── journey panel: type icons + gotcha tint ──────────────────────────────── */
+.jp-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink-faint);
+  transition: color 160ms ease;
+}
+.jp-chapter-title .jp-icon {
+  margin-right: 2px;
+}
+.jp-chapter-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.jp-row:hover .jp-icon,
+.jp-row-current .jp-icon {
+  color: var(--saffron);
+}
+.jp-gotcha .jp-icon {
+  color: var(--gotcha);
+}
+.jp-gotcha .jp-name {
+  color: #d8a07a;
+}
+.jp-gotcha-tag {
+  font-size: 8px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--gotcha);
+  border: 1px solid rgba(194, 90, 42, 0.4);
+  border-radius: 4px;
+  padding: 1px 5px;
+  margin-left: 2px;
+}
+
+/* ── forming-contract build panel ─────────────────────────────────────────── */
+.bp {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+}
+.bp-head {
+  flex-shrink: 0;
+  margin-bottom: 10px;
+}
+.bp-head-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.bp-file {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  color: var(--card);
+  letter-spacing: 0.04em;
+}
+.bp-file-icon {
+  color: var(--saffron);
+}
+.bp-count {
+  font-size: 10.5px;
+  color: var(--ink-faint);
+  letter-spacing: 0.08em;
+  font-variant-numeric: tabular-nums;
+}
+.bp-count-now {
+  color: var(--saffron);
+}
+.bp-blurb {
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--ink-faint);
+  margin: 8px 0 0;
+}
+.bp-code {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  background: #1b2027;
+  border: 1px solid rgba(245, 240, 228, 0.06);
+  border-radius: 9px;
+  padding: 14px 14px 16px;
+  font-size: 11.5px;
+  line-height: 1.62;
+  color: #adbac7;
+}
+.bp-code pre {
+  margin: 0;
+  white-space: pre;
+}
+.bp-line {
+  position: relative;
+  white-space: pre;
+  border-radius: 3px;
+}
+.bp-ln {
+  display: inline-block;
+  width: 22px;
+  margin-right: 12px;
+  text-align: right;
+  color: #4d5862;
+  user-select: none;
+}
+/* an unwritten body: a dashed placeholder chip, not the answer */
+.bp-stub {
+  display: inline-block;
+  font-size: 10.5px;
+  letter-spacing: 0.03em;
+  color: #8a949f;
+  background: rgba(245, 240, 228, 0.035);
+  border: 1px dashed rgba(245, 240, 228, 0.2);
+  border-radius: 5px;
+  padding: 0 9px;
+}
+/* the panel follows the card: when a card is about a specific piece, that piece is
+   called out in the header and the rest of the contract recedes, so the code on the
+   right is unmistakably the same thing the card in the middle is teaching */
+.bp-focusing {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  text-align: left;
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  transition: color 160ms ease;
+}
+.bp-focusing:hover {
+  color: #c9d3dc;
+}
+.bp-focusing strong {
+  color: #c9d3dc;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0.02em;
+}
+.bp-focus-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--saffron);
+  box-shadow: 0 0 6px rgba(224, 145, 58, 0.6);
+  flex-shrink: 0;
+  transition:
+    background 160ms ease,
+    box-shadow 160ms ease;
+}
+/* off state: a hollow ring, so the pill reads as "click to turn focus back on" */
+.bp-focusing.is-off .bp-focus-dot {
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--saffron);
+}
+.bp-has-focus .bp-line:not(.bp-focus) {
+  opacity: 0.34;
+  cursor: pointer;
+  transition: opacity 200ms ease;
+}
+/* a brighten-on-hover so the dimmed code reads as clickable (click = show all) */
+.bp-has-focus .bp-line:not(.bp-focus):hover {
+  opacity: 0.72;
+}
+.bp-line.bp-focus {
+  background: rgba(224, 145, 58, 0.08);
+  box-shadow: inset 2px 0 0 var(--saffron);
+  transition:
+    background 320ms ease,
+    opacity 320ms ease;
+}
+
+/* inking-in: a freshly-written line slides up from its ghost state while a soft
+ * saffron shimmer sweeps across it left-to-right, with a brief glow on the gutter
+ * edge. Multi-line slots cascade via --ink-delay (set per line in BuildPanel), so
+ * the code reads as being written rather than flashing on all at once. */
+.bp-inking {
+  animation: bpInkReveal 560ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: var(--ink-delay, 0ms);
+}
+@keyframes bpInkReveal {
+  0% {
+    opacity: 0.2;
+    transform: translateX(-7px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+/* the travelling shimmer */
+.bp-inking::after {
+  content: "";
+  position: absolute;
+  inset: 0 -10px;
+  pointer-events: none;
+  border-radius: 4px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(224, 145, 58, 0.08) 35%,
+    rgba(224, 145, 58, 0.6) 50%,
+    rgba(224, 145, 58, 0.08) 65%,
+    transparent 100%
+  );
+  background-size: 220% 100%;
+  background-repeat: no-repeat;
+  animation: bpInkSweep 760ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: var(--ink-delay, 0ms);
+}
+@keyframes bpInkSweep {
+  0% {
+    background-position: 140% 0;
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    background-position: -60% 0;
+    opacity: 0;
+  }
+}
+/* a saffron tick on the gutter edge that pulses as the line lands */
+.bp-inking::before {
+  content: "";
+  position: absolute;
+  left: -14px;
+  top: 2px;
+  bottom: 2px;
+  width: 2px;
+  border-radius: 2px;
+  background: var(--saffron);
+  pointer-events: none;
+  animation: bpInkTick 760ms ease both;
+  animation-delay: var(--ink-delay, 0ms);
+}
+@keyframes bpInkTick {
+  0% {
+    opacity: 0;
+    transform: scaleY(0.2);
+  }
+  30% {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scaleY(1);
+  }
+}
+
+/* ── reentrancy run-the-bug demo ──────────────────────────────────────────── */
+.rx {
+  margin-top: 4px;
+}
+.rx-intro {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--ink-soft);
+}
+.rx-runs {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+.rx-run {
+  font-size: 12.5px;
+}
+.rx-run-bad {
+  background: var(--gotcha);
+  color: #fff;
+  border-color: var(--gotcha);
+}
+.rx-run-bad:hover:not(:disabled) {
+  background: var(--gotcha-deep);
+}
+.rx-run-good {
+  background: var(--teal);
+  color: #fff;
+  border-color: var(--teal);
+}
+.rx-run-good:hover:not(:disabled) {
+  filter: brightness(0.94);
+}
+.rx-error {
+  margin-top: 12px;
+  font-size: 11.5px;
+  color: var(--gotcha-deep);
+}
+.rx-result {
+  margin-top: 16px;
+  border-radius: 9px;
+  padding: 14px 16px 16px;
+  border: 1px solid var(--rule);
+}
+.rx-result-bad {
+  background: var(--gotcha-wash);
+  border-color: rgba(194, 90, 42, 0.35);
+}
+.rx-result-good {
+  background: var(--teal-wash);
+  border-color: rgba(76, 156, 139, 0.35);
+}
+.rx-result-head {
+  font-size: 10.5px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  margin-bottom: 10px;
+}
+.rx-result-bad .rx-result-head {
+  color: var(--gotcha-deep);
+}
+.rx-result-good .rx-result-head {
+  color: var(--teal);
+}
+.rx-rows {
+  display: grid;
+  gap: 0;
+}
+.rx-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--rule-soft);
+}
+.rx-row-label {
+  font-size: 11px;
+  color: var(--ink-soft);
+  letter-spacing: 0.03em;
+}
+.rx-row-value {
+  font-size: 13px;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.rx-row-strong {
+  font-weight: 600;
+}
+.rx-result-bad .rx-row-strong {
+  color: var(--gotcha-deep);
+}
+.rx-result-good .rx-row-strong {
+  color: var(--teal);
+}
+.rx-verdict {
+  margin: 12px 0 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--ink-soft);
+}
+
+/* a "read" check on non-graded cards — muted so it reads as "seen / done",
+ * distinct from the saffron/teal verdict marks on graded cards */
+.deck-shell-v2 .jp-verdict.jp-read {
+  color: var(--ink-faint);
+  opacity: 0.75;
+}
+
+/* "you are here", two levels (v2 only — replaces the bobbing manicule with a solid
+   state). The current TASK gets a filled saffron-wash pill; the SECTION it sits in
+   glows softly above it so the learner sees both the where and the what. */
+.deck-shell-v2 .jp-row.jp-row-current,
+.deck-shell-v2 .jp-chapter-head.jp-row-current {
+  background: var(--saffron-wash);
+  border-radius: 9px;
+}
+.deck-shell-v2 .jp-row.jp-row-current .jp-name {
+  font-weight: 600;
+}
+.deck-shell-v2 .jp-chapter-active .jp-chapter-num {
+  color: var(--saffron);
+}
+.deck-shell-v2 .jp-chapter-active .jp-chapter-title {
+  color: var(--ink-soft);
+}
+.deck-shell-v2 .jp-chapter-active .jp-chapter-head .jp-marker {
+  background: rgba(224, 145, 58, 0.42);
+}
+
+/* ── bigger, more readable left index (v2 only — overrides deck.css sizing) ── */
+.deck-shell-v2 .jp {
+  width: 348px;
+  padding: 38px 12px 38px 30px;
+  /* flex column so the deck-level controls pin to the bottom and only the index
+     scrolls (the original rail scrolls as one block; this is v2-only) */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.deck-shell-v2 .jp-head {
+  flex-shrink: 0;
+}
+.deck-shell-v2 .jp-nav {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+.deck-shell-v2 .jp-foot {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding-top: 14px;
+  margin-top: 6px;
+  border-top: 1px solid rgba(245, 240, 228, 0.08);
+}
+.deck-shell-v2 .jp-foot-btn {
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  text-decoration: none;
+  transition: color 160ms ease;
+}
+.deck-shell-v2 .jp-foot-btn:hover {
+  color: var(--card);
+}
+.deck-shell-v2 .jp-foot-reset:hover {
+  color: #d98b6a;
+}
+/* the collapsed rail hides its footer with the rest of the chrome */
+.deck-shell-v2 .jp-collapsed .jp-foot {
+  display: none;
+}
+.deck-shell-v2 .jp-title {
+  font-size: 25px;
+}
+.deck-shell-v2 .jp-subtitle {
+  font-size: 9.5px;
+  letter-spacing: 0.2em;
+}
+.deck-shell-v2 .jp-chapter-head {
+  grid-template-columns: 28px 1fr auto;
+  padding: 8px 8px 9px 14px;
+}
+.deck-shell-v2 .jp-chapter-num {
+  font-size: 12px;
+}
+.deck-shell-v2 .jp-chapter-title {
+  font-size: 17.5px;
+  gap: 8px;
+}
+.deck-shell-v2 .jp-row {
+  grid-template-columns: 30px 1fr auto;
+  column-gap: 11px;
+  padding: 8px 8px 8px 14px;
+}
+.deck-shell-v2 .jp-name {
+  font-size: 14.5px;
+  line-height: 1.4;
+}
+.deck-shell-v2 .jp-verdict {
+  font-size: 13px;
+}
+.deck-shell-v2 .jp-gotcha-tag {
+  font-size: 9px;
+}
+/* keep the collapsed rail fully hidden despite the wider default above */
+.deck-shell-v2 .jp-collapsed {
+  width: 0;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+/* when the left rail is collapsed, give a chunk of the freed width to the right
+ * column (the forming contract / tutor) instead of letting the centered card
+ * column soak up all the space as margin. The contract lines stop truncating. */
+.deck-shell-v2.deck-shell-collapsed .v2-right {
+  width: 560px;
+}
+
+/* ── responsive: stack the right column under the deck on narrow viewports ─── */
+/* CODE cards: on wide screens the BUILDING panel shows the contract (highlighted),
+   so the card only carries the explanation + a pointer to the panel. The inline code
+   block is the fallback for when the panel is hidden (narrow screens, below). */
+.v2-code-pointer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 20px 0 0;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--saffron-deep);
+}
+.v2-code-pointer strong {
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0.01em;
+}
+.v2-code-inline {
+  display: none;
+  margin-top: 18px;
+}
+
+@media (max-width: 1180px) {
+  .v2-right {
+    display: none;
+  }
+  /* panel hidden — fall back to showing the code inline, drop the pointer */
+  .v2-code-pointer {
+    display: none;
+  }
+  .v2-code-inline {
+    display: block;
+  }
+}

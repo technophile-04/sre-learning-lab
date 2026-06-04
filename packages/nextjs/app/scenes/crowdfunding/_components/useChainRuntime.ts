@@ -15,7 +15,7 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import { PREFUNDED_ACCOUNTS, createMemoryClient } from "tevm";
 import { type Abi, formatEther, parseEther } from "viem";
-import { completedSources } from "~~/lib/deck/crowdfunding-contracts";
+import { CROWDFUNDING_SKELETON, completedSources } from "~~/lib/deck/crowdfunding-contracts";
 import type { SolFile } from "~~/lib/deck/types";
 import { compileContracts } from "~~/lib/solc";
 
@@ -121,7 +121,16 @@ export function useChainRuntime() {
       setBusy(true);
       setError(null);
       try {
-        const res = await compileContracts(full);
+        // Compile the learner's running source. A YOUR TURN line graded "pass" is
+        // threaded in verbatim, and the grader judges meaning over syntax — so a
+        // line that's conceptually right but won't actually compile can land here
+        // and brick the deploy. If that happens, fall back to the reference so the
+        // TRY IT / SHIP IT demo still runs (the learner already got per-line
+        // feedback at grading time).
+        let res = await compileContracts(full);
+        if (!res.ok) {
+          res = await compileContracts(completedSources(CROWDFUNDING_SKELETON));
+        }
         if (!res.ok) throw new Error(res.errors[0] ?? "compile failed");
         const crowdFund = res.contracts["CrowdFund"];
         if (!crowdFund) throw new Error("expected CrowdFund contract");

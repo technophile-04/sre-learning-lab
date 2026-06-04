@@ -25,12 +25,17 @@ type DeckState = {
   cardIndex: number;
   /** progress keyed by card id */
   progress: Record<string, CardProgress>;
+  /** cards the learner has read through (non-graded cards marked complete on Next) */
+  read: Record<string, boolean>;
   /** running source per file — skeleton with completed slots filled */
   sources: Record<SolFile, string>;
 
   goTo: (index: number) => void;
   next: () => void;
   prev: () => void;
+
+  /** mark a non-graded card (concept / code / recap) as read */
+  markRead: (cardId: string) => void;
 
   /** record a THINK answer + grade */
   recordThink: (cardId: string, answer: string, verdict: Verdict, feedback: string) => void;
@@ -61,11 +66,14 @@ export const useDeckStore = create<DeckState>()(
       deckId: CROWDFUNDING_DECK.id,
       cardIndex: 0,
       progress: {},
+      read: {},
       sources: initialSources(),
 
       goTo: index => set(() => ({ cardIndex: Math.max(0, Math.min(index, CARD_COUNT - 1)) })),
       next: () => set(s => ({ cardIndex: Math.min(s.cardIndex + 1, CARD_COUNT - 1) })),
       prev: () => set(s => ({ cardIndex: Math.max(s.cardIndex - 1, 0) })),
+
+      markRead: cardId => set(s => ({ read: { ...s.read, [cardId]: true } })),
 
       recordThink: (cardId, answer, verdict, feedback) =>
         set(s => ({ progress: { ...s.progress, [cardId]: { answer, verdict, feedback } } })),
@@ -80,7 +88,7 @@ export const useDeckStore = create<DeckState>()(
           };
         }),
 
-      resetDeck: () => set(() => ({ cardIndex: 0, progress: {}, sources: initialSources() })),
+      resetDeck: () => set(() => ({ cardIndex: 0, progress: {}, read: {}, sources: initialSources() })),
     }),
     {
       name: `deck:${CROWDFUNDING_DECK.id}`,
@@ -89,12 +97,13 @@ export const useDeckStore = create<DeckState>()(
       // an older version still carries the dead import and fails to compile, so we
       // discard stale state and re-seed from the current skeleton instead of trusting it.
       version: 1,
-      migrate: () => ({ cardIndex: 0, progress: {}, sources: initialSources() }) as DeckState,
+      migrate: () => ({ cardIndex: 0, progress: {}, read: {}, sources: initialSources() }) as DeckState,
       // guard SSR — the store module is evaluated on the server too
       storage: createJSONStorage(() => (typeof window !== "undefined" ? window.localStorage : undefined!)),
       partialize: state => ({
         cardIndex: state.cardIndex,
         progress: state.progress,
+        read: state.read,
         sources: state.sources,
       }),
     },
