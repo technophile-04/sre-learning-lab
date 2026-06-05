@@ -1,0 +1,1646 @@
+/* v2 deck — additive styles only. Base tokens, the bone card, buttons, code
+ * viewer, journey-panel skeleton and tutor styles all come from deck.css +
+ * labs.css (imported alongside this file). Here we add the three-pane workspace,
+ * the forming-contract panel, the gotcha treatment, the type-icon chrome, and the
+ * reentrancy demo. A redder amber than the UI saffron marks the Ethereum traps. */
+@font-face {
+  font-family: "Space Grotesk";
+  src: url("/sre/fonts/SpaceGrotesk_wght_.ttf") format("truetype");
+  font-weight: 300 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Space Mono";
+  src: url("/sre/fonts/SpaceMono-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Space Mono";
+  src: url("/sre/fonts/SpaceMono-Bold.ttf") format("truetype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+.deck-root {
+  --gotcha: #c25a2a;
+  --gotcha-deep: #a8481d;
+  --gotcha-wash: rgba(194, 90, 42, 0.09);
+}
+
+/* ── three-pane shell ─────────────────────────────────────────────────────── */
+.deck-shell-v2 {
+  align-items: stretch;
+}
+.v2-center {
+  display: flex;
+  flex-direction: column;
+}
+.v2-center-col {
+  width: 100%;
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 0 28px;
+}
+/* rail open: no top bar, so give the card a little breathing room from the SE header
+   (the bar normally supplied this gap) without giving back the space it was eating */
+.v2-center-col-open {
+  padding-top: 30px;
+}
+
+/* Pin the deck-stack ghosts to the active card's height (the original deck uses a
+   fixed-height ghost, which juts out below short cards). top:0 is set on .deck-ghost
+   in deck.css; bottom:0 stretches each ghost to the card so the stack peeks a
+   constant sliver under every card regardless of its content length. */
+.deck-shell-v2 .deck-ghost {
+  bottom: 0;
+}
+.v2-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 26px 0 22px;
+  min-height: 64px;
+}
+
+/* collapsed-state breadcrumb: challenge + progress on top, chapter + task below */
+.v2-crumb {
+  display: inline-flex;
+  align-items: center;
+  gap: 13px;
+  max-width: 540px;
+  padding: 6px 10px 6px 6px;
+  margin-left: -6px;
+  border: 0;
+  border-radius: 9px;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  transition: background 160ms ease;
+}
+.v2-crumb:hover {
+  background: rgba(245, 240, 228, 0.045);
+}
+.v2-crumb-grip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  border: 1px solid rgba(245, 240, 228, 0.12);
+  border-radius: 9px;
+  color: var(--ink-faint);
+  font-size: 16px;
+  transition:
+    color 160ms ease,
+    border-color 160ms ease,
+    background 160ms ease;
+}
+.v2-crumb:hover .v2-crumb-grip {
+  color: var(--card);
+  border-color: rgba(224, 145, 58, 0.5);
+  background: var(--saffron-wash);
+}
+.v2-crumb-body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  flex: 1;
+}
+/* context strip — the quiet line: course · section number · section title, with
+   the position pinned to the far right. The section title (the long literary one)
+   truncates here, so it can never clip the task on the line below. */
+.v2-crumb-context {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+  font-size: 11px;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+.v2-crumb-course {
+  color: var(--ink-faint);
+  flex-shrink: 0;
+}
+.v2-crumb-roman {
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  color: var(--saffron);
+  flex-shrink: 0;
+}
+.v2-crumb-section {
+  font-family: var(--font-body), serif;
+  font-size: 13px;
+  text-transform: none;
+  letter-spacing: 0.01em;
+  color: var(--ink-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.v2-crumb-count {
+  margin-left: auto;
+  padding-left: 12px;
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.v2-crumb-count-now {
+  color: var(--saffron);
+}
+/* the loud line — what you're on right now, biggest and brightest, full width */
+.v2-crumb-task {
+  font-size: 20px;
+  line-height: 1.12;
+  color: var(--card);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.v2-credit {
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin-top: 3px;
+}
+.v2-topbar-link {
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  background: none;
+  cursor: pointer;
+  transition: color 160ms ease;
+}
+.v2-topbar-link:hover {
+  color: var(--saffron);
+}
+
+/* right column: always-on contract / tutor */
+.v2-right {
+  width: 430px;
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  align-self: flex-start;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid rgba(245, 240, 228, 0.07);
+  background: linear-gradient(180deg, rgba(245, 240, 228, 0.02), rgba(245, 240, 228, 0));
+}
+.v2-right-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 16px 18px 0;
+  flex-shrink: 0;
+}
+.v2-tab {
+  position: relative;
+  padding: 8px 14px;
+  border: 0;
+  background: none;
+  color: var(--ink-faint);
+  font-size: 10.5px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition:
+    color 160ms ease,
+    border-color 160ms ease;
+}
+.v2-tab:hover {
+  color: var(--card);
+}
+.v2-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.v2-tab-ico {
+  display: inline-flex;
+  align-items: center;
+  opacity: 0.7;
+  transition: opacity 160ms ease;
+}
+.v2-tab:hover .v2-tab-ico,
+.v2-tab-on .v2-tab-ico {
+  opacity: 1;
+}
+/* the AI tutor reads as its own thing: teal accent + a faint spark glow, so it's
+   distinct from the saffron "building" craft surface */
+.v2-tab-tutor .v2-tab-ico {
+  color: var(--teal);
+  font-size: 12px;
+}
+.v2-tab-build.v2-tab-on {
+  color: var(--card);
+  border-bottom-color: var(--saffron);
+}
+.v2-tab-tutor.v2-tab-on {
+  color: var(--card);
+  border-bottom-color: var(--teal);
+}
+.v2-tab-dot {
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--teal);
+  margin-left: 6px;
+  vertical-align: middle;
+  box-shadow: 0 0 0 0 rgba(76, 156, 139, 0.5);
+  animation: numberPulse 1.6s ease infinite;
+}
+/* a single soft saffron border glow that breathes across the whole right panel when
+   a middle-card action lands a panel here — fades in, then eases out and ends fully
+   gone (one swell, never a loop, so it signals without nagging). Replays via a keyed
+   remount in DeckV3. The inset shadow hugs the panel's inner edges, strongest on the
+   left edge facing the card — where the eye is travelling from. */
+.v2-right-glow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 6;
+  animation: rightPanelGlow 1500ms cubic-bezier(0.33, 0, 0.2, 1) forwards;
+}
+@keyframes rightPanelGlow {
+  0% {
+    opacity: 0;
+    box-shadow:
+      inset 0 0 0 1px rgba(224, 145, 58, 0),
+      inset 16px 0 36px -12px rgba(224, 145, 58, 0);
+  }
+  28% {
+    opacity: 1;
+    box-shadow:
+      inset 0 0 0 1px rgba(224, 145, 58, 0.5),
+      inset 16px 0 40px -10px rgba(224, 145, 58, 0.28);
+  }
+  100% {
+    opacity: 0;
+    box-shadow:
+      inset 0 0 0 1px rgba(224, 145, 58, 0),
+      inset 16px 0 40px -10px rgba(224, 145, 58, 0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .v2-right-glow {
+    animation-duration: 1ms;
+  }
+}
+
+.v2-right-body {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding: 14px 16px 18px;
+}
+/* both panels are always mounted; the inactive one is hidden so the BUILDING panel
+   keeps its scroll + ink state across tab switches. The shown panel slides in. */
+.v2-panel {
+  display: none;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+}
+.v2-panel-on {
+  display: flex;
+  animation: panelReveal 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes panelReveal {
+  from {
+    opacity: 0;
+    transform: translateY(7px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ── card kicker (icon + plain label, no tier-2) ──────────────────────────── */
+.v2-kicker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.v2-kicker-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  color: var(--saffron-deep);
+  background: var(--saffron-wash);
+}
+.v2-kicker-icon-gotcha {
+  color: var(--gotcha-deep);
+  background: var(--gotcha-wash);
+}
+.v2-kicker-label {
+  font-size: 10.5px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--saffron-deep);
+}
+.v2-kicker-label-gotcha {
+  color: var(--gotcha-deep);
+}
+
+/* gotcha card: a warning ribbon along the top edge + warm border */
+.card-gotcha {
+  box-shadow:
+    inset 0 3px 0 0 var(--gotcha),
+    0 18px 40px -24px rgba(0, 0, 0, 0.5);
+  border-color: rgba(194, 90, 42, 0.32) !important;
+}
+
+/* "ask Boots" affordance on your-turn / think cards */
+.v2-ask-boots {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border: 1px solid var(--rule);
+  border-radius: 7px;
+  background: rgba(26, 24, 34, 0.02);
+  color: var(--ink-soft);
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition:
+    color 160ms ease,
+    border-color 160ms ease,
+    background 160ms ease;
+}
+.v2-ask-boots:hover {
+  color: var(--saffron-deep);
+  border-color: var(--saffron);
+  background: var(--saffron-wash);
+}
+
+/* run-the-bug demo mount inside the reentrancy concept card */
+.v2-demo-mount {
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px dashed var(--rule);
+}
+.v2-demo-label {
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--gotcha-deep);
+  margin-bottom: 12px;
+}
+
+/* ── journey panel: type icons + gotcha tint ──────────────────────────────── */
+.jp-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink-faint);
+  transition: color 160ms ease;
+}
+.jp-chapter-title .jp-icon {
+  margin-right: 2px;
+}
+.jp-chapter-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.jp-row:hover .jp-icon,
+.jp-row-current .jp-icon {
+  color: var(--saffron);
+}
+.jp-gotcha .jp-icon {
+  color: var(--gotcha);
+}
+.jp-gotcha .jp-name {
+  color: #d8a07a;
+}
+.jp-gotcha-tag {
+  font-size: 8px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--gotcha);
+  border: 1px solid rgba(194, 90, 42, 0.4);
+  border-radius: 4px;
+  padding: 1px 5px;
+  margin-left: 2px;
+}
+
+/* ── forming-contract build panel ─────────────────────────────────────────── */
+.bp {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+}
+.bp-head {
+  flex-shrink: 0;
+  margin-bottom: 10px;
+}
+.bp-head-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.bp-file {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  color: var(--card);
+  letter-spacing: 0.04em;
+}
+.bp-file-icon {
+  color: var(--saffron);
+}
+.bp-count {
+  font-size: 10.5px;
+  color: var(--ink-faint);
+  letter-spacing: 0.08em;
+  font-variant-numeric: tabular-nums;
+}
+.bp-count-now {
+  color: var(--saffron);
+}
+.bp-blurb {
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--ink-faint);
+  margin: 8px 0 0;
+}
+.bp-code {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  background: #1b2027;
+  border: 1px solid rgba(245, 240, 228, 0.06);
+  border-radius: 9px;
+  padding: 14px 14px 16px;
+  font-size: 11.5px;
+  line-height: 1.62;
+  color: #adbac7;
+}
+.bp-code pre {
+  margin: 0;
+  white-space: pre;
+}
+.bp-line {
+  position: relative;
+  white-space: pre;
+  border-radius: 3px;
+}
+.bp-ln {
+  display: inline-block;
+  width: 22px;
+  margin-right: 12px;
+  text-align: right;
+  color: #4d5862;
+  user-select: none;
+}
+/* an unwritten body: a dashed placeholder chip, not the answer */
+.bp-stub {
+  display: inline-block;
+  font-size: 10.5px;
+  letter-spacing: 0.03em;
+  color: #8a949f;
+  background: rgba(245, 240, 228, 0.035);
+  border: 1px dashed rgba(245, 240, 228, 0.2);
+  border-radius: 5px;
+  padding: 0 9px;
+}
+/* the panel follows the card: when a card is about a specific piece, that piece is
+   called out in the header and the rest of the contract recedes, so the code on the
+   right is unmistakably the same thing the card in the middle is teaching */
+.bp-focusing {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  text-align: left;
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  transition: color 160ms ease;
+}
+.bp-focusing:hover {
+  color: #c9d3dc;
+}
+.bp-focusing strong {
+  color: #c9d3dc;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0.02em;
+}
+.bp-focus-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--saffron);
+  box-shadow: 0 0 6px rgba(224, 145, 58, 0.6);
+  flex-shrink: 0;
+  transition:
+    background 160ms ease,
+    box-shadow 160ms ease;
+}
+/* off state: a hollow ring, so the pill reads as "click to turn focus back on" */
+.bp-focusing.is-off .bp-focus-dot {
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--saffron);
+}
+.bp-has-focus .bp-line:not(.bp-focus) {
+  opacity: 0.34;
+  cursor: pointer;
+  transition: opacity 200ms ease;
+}
+/* a brighten-on-hover so the dimmed code reads as clickable (click = show all) */
+.bp-has-focus .bp-line:not(.bp-focus):hover {
+  opacity: 0.72;
+}
+.bp-line.bp-focus {
+  background: rgba(224, 145, 58, 0.08);
+  box-shadow: inset 2px 0 0 var(--saffron);
+  transition:
+    background 320ms ease,
+    opacity 320ms ease;
+}
+/* cards with no piece to point at (IDEA / THINK / RECAP): the contract is ambient
+   context, not the thing to look at, so the whole thing recedes */
+.bp-code.bp-dimmed .bp-line {
+  opacity: 0.4;
+  transition: opacity 320ms ease;
+}
+
+/* inking-in: a freshly-written line slides up from its ghost state while a soft
+ * saffron shimmer sweeps across it left-to-right, with a brief glow on the gutter
+ * edge. Multi-line slots cascade via --ink-delay (set per line in BuildPanel), so
+ * the code reads as being written rather than flashing on all at once. */
+.bp-inking {
+  animation: bpInkReveal 560ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: var(--ink-delay, 0ms);
+}
+@keyframes bpInkReveal {
+  0% {
+    opacity: 0.2;
+    transform: translateX(-7px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+/* the travelling shimmer */
+.bp-inking::after {
+  content: "";
+  position: absolute;
+  inset: 0 -10px;
+  pointer-events: none;
+  border-radius: 4px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(224, 145, 58, 0.08) 35%,
+    rgba(224, 145, 58, 0.6) 50%,
+    rgba(224, 145, 58, 0.08) 65%,
+    transparent 100%
+  );
+  background-size: 220% 100%;
+  background-repeat: no-repeat;
+  animation: bpInkSweep 760ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: var(--ink-delay, 0ms);
+}
+@keyframes bpInkSweep {
+  0% {
+    background-position: 140% 0;
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    background-position: -60% 0;
+    opacity: 0;
+  }
+}
+/* a saffron tick on the gutter edge that pulses as the line lands */
+.bp-inking::before {
+  content: "";
+  position: absolute;
+  left: -14px;
+  top: 2px;
+  bottom: 2px;
+  width: 2px;
+  border-radius: 2px;
+  background: var(--saffron);
+  pointer-events: none;
+  animation: bpInkTick 760ms ease both;
+  animation-delay: var(--ink-delay, 0ms);
+}
+@keyframes bpInkTick {
+  0% {
+    opacity: 0;
+    transform: scaleY(0.2);
+  }
+  30% {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scaleY(1);
+  }
+}
+
+/* ── reentrancy run-the-bug demo ──────────────────────────────────────────── */
+.rx {
+  margin-top: 4px;
+}
+.rx-intro {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--ink-soft);
+}
+.rx-runs {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+.rx-run {
+  font-size: 12.5px;
+}
+.rx-run-bad {
+  background: var(--gotcha);
+  color: #fff;
+  border-color: var(--gotcha);
+}
+.rx-run-bad:hover:not(:disabled) {
+  background: var(--gotcha-deep);
+}
+.rx-run-good {
+  background: var(--teal);
+  color: #fff;
+  border-color: var(--teal);
+}
+.rx-run-good:hover:not(:disabled) {
+  filter: brightness(0.94);
+}
+.rx-error {
+  margin-top: 12px;
+  font-size: 11.5px;
+  color: var(--gotcha-deep);
+}
+.rx-result {
+  margin-top: 16px;
+  border-radius: 9px;
+  padding: 14px 16px 16px;
+  border: 1px solid var(--rule);
+}
+.rx-result-bad {
+  background: var(--gotcha-wash);
+  border-color: rgba(194, 90, 42, 0.35);
+}
+.rx-result-good {
+  background: var(--teal-wash);
+  border-color: rgba(76, 156, 139, 0.35);
+}
+.rx-result-head {
+  font-size: 10.5px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  margin-bottom: 10px;
+}
+.rx-result-bad .rx-result-head {
+  color: var(--gotcha-deep);
+}
+.rx-result-good .rx-result-head {
+  color: var(--teal);
+}
+.rx-rows {
+  display: grid;
+  gap: 0;
+}
+.rx-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--rule-soft);
+}
+.rx-row-label {
+  font-size: 11px;
+  color: var(--ink-soft);
+  letter-spacing: 0.03em;
+}
+.rx-row-value {
+  font-size: 13px;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.rx-row-strong {
+  font-weight: 600;
+}
+.rx-result-bad .rx-row-strong {
+  color: var(--gotcha-deep);
+}
+.rx-result-good .rx-row-strong {
+  color: var(--teal);
+}
+.rx-verdict {
+  margin: 12px 0 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--ink-soft);
+}
+
+/* a "read" check on non-graded cards — muted so it reads as "seen / done",
+ * distinct from the saffron/teal verdict marks on graded cards */
+.deck-shell-v2 .jp-verdict.jp-read {
+  color: var(--ink-faint);
+  opacity: 0.75;
+}
+
+/* "you are here", two levels (v2 only — replaces the bobbing manicule with a solid
+   state). The current TASK gets a filled saffron-wash pill; the SECTION it sits in
+   glows softly above it so the learner sees both the where and the what. */
+.deck-shell-v2 .jp-row.jp-row-current,
+.deck-shell-v2 .jp-chapter-head.jp-row-current {
+  background: var(--saffron-wash);
+  border-radius: 9px;
+}
+.deck-shell-v2 .jp-row.jp-row-current .jp-name {
+  font-weight: 600;
+}
+.deck-shell-v2 .jp-chapter-active .jp-chapter-num {
+  color: var(--saffron);
+}
+.deck-shell-v2 .jp-chapter-active .jp-chapter-title {
+  color: var(--ink-soft);
+}
+.deck-shell-v2 .jp-chapter-active .jp-chapter-head .jp-marker {
+  background: rgba(224, 145, 58, 0.42);
+}
+
+/* ── bigger, more readable left index (v2 only — overrides deck.css sizing) ── */
+.deck-shell-v2 .jp {
+  width: 348px;
+  padding: 38px 12px 38px 30px;
+  /* flex column so the deck-level controls pin to the bottom and only the index
+     scrolls (the original rail scrolls as one block; this is v2-only) */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.deck-shell-v2 .jp-head {
+  flex-shrink: 0;
+}
+.deck-shell-v2 .jp-nav {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+.deck-shell-v2 .jp-foot {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding-top: 14px;
+  margin-top: 6px;
+  border-top: 1px solid rgba(245, 240, 228, 0.08);
+}
+.deck-shell-v2 .jp-foot-btn {
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  text-decoration: none;
+  transition: color 160ms ease;
+}
+.deck-shell-v2 .jp-foot-btn:hover {
+  color: var(--card);
+}
+.deck-shell-v2 .jp-foot-reset:hover {
+  color: #d98b6a;
+}
+/* the collapsed rail hides its footer with the rest of the chrome */
+.deck-shell-v2 .jp-collapsed .jp-foot {
+  display: none;
+}
+.deck-shell-v2 .jp-title {
+  font-size: 25px;
+}
+.deck-shell-v2 .jp-subtitle {
+  font-size: 9.5px;
+  letter-spacing: 0.2em;
+}
+.deck-shell-v2 .jp-chapter-head {
+  grid-template-columns: 28px 1fr auto;
+  padding: 8px 8px 9px 14px;
+}
+.deck-shell-v2 .jp-chapter-num {
+  font-size: 12px;
+}
+.deck-shell-v2 .jp-chapter-title {
+  font-size: 17.5px;
+  gap: 8px;
+}
+.deck-shell-v2 .jp-row {
+  grid-template-columns: 30px 1fr auto;
+  column-gap: 11px;
+  padding: 8px 8px 8px 14px;
+}
+.deck-shell-v2 .jp-name {
+  font-size: 14.5px;
+  line-height: 1.4;
+}
+.deck-shell-v2 .jp-verdict {
+  font-size: 13px;
+}
+.deck-shell-v2 .jp-gotcha-tag {
+  font-size: 9px;
+}
+/* keep the collapsed rail fully hidden despite the wider default above */
+.deck-shell-v2 .jp-collapsed {
+  width: 0;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+/* when the left rail is collapsed, give a chunk of the freed width to the right
+ * column (the forming contract / tutor) instead of letting the centered card
+ * column soak up all the space as margin. The contract lines stop truncating. */
+.deck-shell-v2.deck-shell-collapsed .v2-right {
+  width: 560px;
+}
+
+/* ── responsive: stack the right column under the deck on narrow viewports ─── */
+/* CODE cards: on wide screens the BUILDING panel shows the contract (highlighted),
+   so the card only carries the explanation + a pointer to the panel. The inline code
+   block is the fallback for when the panel is hidden (narrow screens, below). */
+.v2-code-note {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-top: 22px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  font-size: 12.5px;
+  letter-spacing: 0.01em;
+  color: var(--ink-faint);
+  transition: color 160ms ease;
+}
+.v2-code-note:hover {
+  color: var(--ink-soft);
+}
+.v2-code-note-arrow {
+  color: var(--ink-faint);
+  transition:
+    transform 160ms ease,
+    color 160ms ease;
+}
+.v2-code-note:hover .v2-code-note-arrow {
+  transform: translateX(2px);
+  color: var(--saffron-deep);
+}
+.v2-code-note-file {
+  color: var(--saffron-deep);
+}
+.v2-code-inline {
+  display: none;
+  margin-top: 18px;
+}
+
+@media (max-width: 1180px) {
+  .v2-right {
+    display: none;
+  }
+  /* panel hidden — fall back to showing the code inline, drop the note */
+  .v2-code-note {
+    display: none;
+  }
+  .v2-code-inline {
+    display: block;
+  }
+}
+
+/* Speedrun Ethereum design-system skin for the v3 clone. This remaps the v2
+   interaction model to the SRE palette, type, shapes, and pixel scenery. */
+.deck-root-v3 {
+  --sre-primary: #088484;
+  --sre-primary-content: #ffffff;
+  --sre-secondary: #c8f5ff;
+  --sre-accent: #67ddde;
+  --sre-base-100: #ffffff;
+  --sre-base-200: #e9fbff;
+  --sre-base-300: #c8f5ff;
+  --sre-base-content: #026262;
+  --sre-neutral: #066060;
+  --sre-warning: #ffcf72;
+  --sre-error: #ff8863;
+  --sre-build-bg: #ffe9c9;
+  --sre-build-border: #ffcb7e;
+  --sre-font-sans: "Space Grotesk", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --sre-font-mono: "Space Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --sre-shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --sre-shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+
+  --bg: var(--sre-base-200);
+  --bg-2: var(--sre-base-300);
+  --card: var(--sre-base-100);
+  --card-edge: var(--sre-base-300);
+  --ink: var(--sre-base-content);
+  --ink-soft: #066060;
+  --ink-faint: rgba(2, 98, 98, 0.66);
+  --saffron: var(--sre-primary);
+  --saffron-deep: #026262;
+  --saffron-wash: rgba(103, 221, 222, 0.24);
+  --teal: #2fbabb;
+  --teal-wash: rgba(47, 186, 187, 0.18);
+  --rule: rgba(8, 132, 132, 0.2);
+  --rule-soft: rgba(8, 132, 132, 0.1);
+  --gotcha: var(--sre-error);
+  --gotcha-deep: #c95f42;
+  --gotcha-wash: rgba(255, 136, 99, 0.14);
+  --font-display: var(--sre-font-sans);
+  --font-body: var(--sre-font-sans);
+  --font-mono: var(--sre-font-mono);
+  --font-deva: var(--sre-font-mono);
+
+  overflow-x: hidden;
+  background: var(--sre-base-200);
+  color: var(--sre-base-content);
+  font-family: var(--sre-font-sans);
+  font-weight: 400;
+}
+
+[data-theme="dark"] .deck-root-v3 {
+  --sre-primary: #c8f5ff;
+  --sre-primary-content: #000000;
+  --sre-secondary: #026262;
+  --sre-accent: #67ddde;
+  --sre-base-100: #088484;
+  --sre-base-200: #026262;
+  --sre-base-300: #088484;
+  --sre-base-content: #e9fbff;
+  --sre-neutral: #ffffffeb;
+  --sre-warning: #ffcf72;
+  --sre-error: #ff8863;
+  --sre-build-bg: rgba(255, 233, 201, 0.16);
+  --sre-build-border: #ffcb7e;
+  --bg: var(--sre-base-200);
+  --bg-2: var(--sre-base-100);
+  --card: #0a7777;
+  --card-edge: rgba(200, 245, 255, 0.28);
+  --ink: var(--sre-base-content);
+  --ink-soft: rgba(233, 251, 255, 0.84);
+  --ink-faint: rgba(233, 251, 255, 0.62);
+  --saffron: var(--sre-primary);
+  --saffron-deep: var(--sre-accent);
+  --saffron-wash: rgba(103, 221, 222, 0.18);
+  --teal: var(--sre-accent);
+  --teal-wash: rgba(103, 221, 222, 0.2);
+  --rule: rgba(200, 245, 255, 0.22);
+  --rule-soft: rgba(200, 245, 255, 0.12);
+  --gotcha: var(--sre-error);
+  --gotcha-deep: #ffc1ad;
+  --gotcha-wash: rgba(255, 136, 99, 0.16);
+}
+
+/* anchored at the end of the right-panel tab row (deep teal in both themes), not
+   floating in the corner. Light-on-dark chrome so it reads on the teal rail. */
+.deck-root-v3 .v3-theme-switch {
+  margin-left: auto;
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 30px;
+  padding: 0 8px;
+  border: 1px solid rgba(200, 245, 255, 0.24);
+  border-radius: 9999px;
+  background: rgba(200, 245, 255, 0.08);
+}
+
+.deck-root-v3 .v3-theme-switch > div {
+  height: auto;
+}
+
+.deck-root-v3 .v3-theme-switch .toggle {
+  width: 44px;
+  min-height: 22px;
+  height: 22px;
+  border-color: rgba(200, 245, 255, 0.5);
+  background-color: rgba(200, 245, 255, 0.16);
+}
+
+/* bright aqua reads on the teal rail in both themes (teal-on-teal was invisible) */
+.deck-root-v3 .v3-theme-switch .swap {
+  color: var(--sre-accent);
+}
+
+.deck-root-v3::before {
+  opacity: 0.72;
+  background-image: url("/sre/assets/home_header_clouds.svg");
+  background-repeat: repeat-x;
+  background-position: top center;
+  background-size: auto 148px;
+}
+
+.deck-root-v3::after {
+  content: "";
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 58px;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.78;
+  background: url("/sre/assets/header_platform.svg") repeat-x bottom center / auto 58px;
+}
+
+.deck-root-v3 .deck-display,
+.deck-root-v3 .tier2,
+.deck-root-v3 .jp-title,
+.deck-root-v3 .jp-chapter-title,
+.deck-root-v3 .wb-bar-title,
+.deck-root-v3 .ll-h,
+.deck-root-v3 .tut-bar-title {
+  font-style: normal;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+.deck-root-v3 .deck-shell-v3 {
+  isolation: isolate;
+}
+
+.deck-root-v3 .deck-card {
+  border: 2px solid var(--sre-base-300);
+  border-radius: 12px;
+  background: var(--sre-base-100);
+  box-shadow: var(--sre-shadow-lg);
+}
+
+.deck-root-v3 .deck-ghost {
+  border: 2px solid rgba(8, 132, 132, 0.12);
+  background: var(--sre-base-300);
+  box-shadow: 0 18px 30px -24px rgba(8, 132, 132, 0.45);
+}
+
+.deck-root-v3 .deck-btn,
+.deck-root-v3 .v2-ask-boots,
+.deck-root-v3 .deck-nav-opener,
+.deck-root-v3 .deck-peek-btn,
+.deck-root-v3 .peek-close,
+.deck-root-v3 .viz-btn {
+  border-radius: 9999px;
+  font-weight: 500;
+}
+
+/* the right-column tabs are underline tabs, not pills — the pill radius above
+   curled their bottom border into a weird capsule. Keep them flat with a clean
+   accent underline, and give them the pointer cursor a button should have. */
+.deck-root-v3 .v2-tab {
+  border-radius: 0;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+/* the deck controls (back / next / done) are <button>s with no pointer cursor
+   from the base sheet — restore the hover hand (but not on the disabled back). */
+.deck-root-v3 .deck-btn:not(:disabled) {
+  cursor: pointer;
+}
+
+.deck-root-v3 .deck-btn-primary {
+  border: 2px solid var(--sre-primary);
+  background: var(--sre-primary);
+  color: var(--sre-primary-content);
+  box-shadow: var(--sre-shadow-md);
+}
+
+.deck-root-v3 .deck-btn-primary:hover {
+  background: #026262;
+  border-color: #026262;
+}
+
+.deck-root-v3 .deck-btn-ghost {
+  border: 2px solid rgba(8, 132, 132, 0.22);
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--sre-base-content);
+}
+
+.deck-root-v3 .deck-btn-ghost:hover {
+  border-color: var(--sre-primary);
+  background: var(--sre-base-100);
+}
+
+.deck-root-v3 .deck-rail {
+  height: 5px;
+  background: rgba(8, 132, 132, 0.14);
+}
+
+.deck-root-v3 .deck-rail-fill {
+  background: var(--sre-primary);
+}
+
+.deck-root-v3 .jp,
+.deck-root-v3 .v2-right,
+.deck-root-v3 .peek-sheet {
+  background: #026262;
+  color: var(--sre-base-100);
+  border-color: rgba(200, 245, 255, 0.2);
+}
+
+.deck-root-v3 .jp-head {
+  position: relative;
+  padding-top: 62px;
+  border-bottom-color: rgba(200, 245, 255, 0.22);
+}
+
+.deck-root-v3 .jp-head::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 178px;
+  height: 40px;
+  background: url("/sre/assets/logo-sre-wordmark.svg") no-repeat left center / contain;
+  image-rendering: pixelated;
+}
+
+[data-theme="dark"] .deck-root-v3 .jp-head::before {
+  background-image: url("/sre/assets/logo-sre-wordmark-dark.svg");
+}
+
+[data-theme="dark"] .deck-root-v3 .deck-card {
+  border-color: rgba(200, 245, 255, 0.28);
+  background: #088484;
+  color: var(--sre-base-content);
+  box-shadow: 0 18px 42px -28px rgba(0, 0, 0, 0.55);
+}
+
+[data-theme="dark"] .deck-root-v3 .deck-ghost {
+  background: rgba(200, 245, 255, 0.18);
+  border-color: rgba(200, 245, 255, 0.16);
+}
+
+.deck-root-v3 .jp-title,
+.deck-root-v3 .jp-chapter-title,
+.deck-root-v3 .jp-row-current .jp-name,
+.deck-root-v3 .jp-chapter-head.jp-row-current .jp-chapter-title,
+.deck-root-v3 .v2-tab:hover,
+.deck-root-v3 .v2-tab-on,
+.deck-root-v3 .bp-file,
+.deck-root-v3 .peek-file-name {
+  color: var(--sre-base-100);
+}
+
+.deck-root-v3 .jp-subtitle,
+.deck-root-v3 .jp-count,
+.deck-root-v3 .jp-name,
+.deck-root-v3 .v2-tab,
+.deck-root-v3 .bp-blurb,
+.deck-root-v3 .bp-count,
+.deck-root-v3 .lab-tutor-role,
+.deck-root-v3 .lab-tutor-empty,
+.deck-root-v3 .lab-tutor-seed .rich-p {
+  color: rgba(233, 251, 255, 0.74);
+}
+
+/* the rail is deep teal in BOTH themes, so the icon's default --ink-faint (deep
+   teal in light mode) was invisible against it — only current/hover icons showed.
+   Give every type icon a readable pale-cyan resting state on the teal rail. */
+.deck-root-v3 .jp-icon {
+  color: rgba(233, 251, 255, 0.66);
+}
+
+/* gotcha rows keep their coral icon — re-assert it over the pale default above */
+.deck-root-v3 .jp-gotcha .jp-icon {
+  color: var(--sre-error);
+}
+
+.deck-root-v3 .jp-chapter-num,
+.deck-root-v3 .jp-row-current .jp-icon,
+.deck-root-v3 .jp-chapter-head.jp-row-current .jp-icon,
+.deck-root-v3 .jp-row:hover .jp-icon,
+.deck-root-v3 .jp-chapter-head:hover .jp-icon,
+.deck-root-v3 .jp-count-now,
+.deck-root-v3 .v2-kicker-label,
+.deck-root-v3 .bp-count-now,
+.deck-root-v3 .bp-file-icon,
+.deck-root-v3 .v2-code-note-file,
+.deck-root-v3 .v2-code-note-arrow {
+  color: var(--sre-accent);
+}
+
+.deck-root-v3 .jp-collapse {
+  border-color: rgba(200, 245, 255, 0.3);
+  color: rgba(233, 251, 255, 0.8);
+}
+
+.deck-root-v3 .jp-row:hover,
+.deck-root-v3 .jp-chapter-head:hover,
+.deck-root-v3 .deck-shell-v2 .jp-row.jp-row-current,
+.deck-root-v3 .deck-shell-v2 .jp-chapter-head.jp-row-current {
+  background: rgba(103, 221, 222, 0.14);
+}
+
+.deck-root-v3 .jp-marker,
+.deck-root-v3 .deck-shell-v2 .jp-chapter-active .jp-chapter-head .jp-marker {
+  background: rgba(103, 221, 222, 0.28);
+}
+
+.deck-root-v3 .jp-row-current .jp-marker {
+  background: var(--sre-accent);
+  box-shadow: 0 0 8px rgba(103, 221, 222, 0.6);
+}
+
+/* the section you're currently in. The base deck dims the active chapter title to
+   --ink-soft (deep teal) — invisible on the dark teal rail, and it out-specifies
+   the v3 skin. Flip it so the active section is the CLEAREST thing: a soft accent
+   backing, a bright title, and an accent number + icon. Works in both themes
+   (the rail is dark teal either way). */
+.deck-root-v3 .deck-shell-v2 .jp-chapter-active .jp-chapter-head {
+  background: rgba(103, 221, 222, 0.1);
+  border-radius: 10px;
+}
+.deck-root-v3 .deck-shell-v2 .jp-chapter-active .jp-chapter-title {
+  color: #ffffff;
+}
+.deck-root-v3 .deck-shell-v2 .jp-chapter-active .jp-chapter-num,
+.deck-root-v3 .deck-shell-v2 .jp-chapter-active .jp-icon {
+  color: var(--sre-accent);
+}
+
+.deck-root-v3 .v2-topbar {
+  color: var(--sre-base-content);
+}
+
+/* the collapsed breadcrumb is the only handle back to the lesson index, but with
+   no resting surface it dissolved into the page. Give it a clickable pill surface
+   so it reads as a control, not stray text. */
+.deck-root-v3 .v2-crumb {
+  border-radius: 14px;
+  border: 2px solid rgba(8, 132, 132, 0.22);
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: var(--sre-shadow-md);
+}
+
+.deck-root-v3 .v2-crumb:hover {
+  border-color: var(--sre-primary);
+  background: var(--sre-base-100);
+}
+
+/* the grip is a clean filled chip — no border (the bordered box read as a "border
+   inside a border" against the crumb's own border) */
+.deck-root-v3 .v2-crumb-grip {
+  border: 0;
+  background: rgba(103, 221, 222, 0.18);
+  color: var(--sre-primary);
+}
+
+.deck-root-v3 .v2-crumb:hover .v2-crumb-grip {
+  background: rgba(103, 221, 222, 0.3);
+  color: var(--sre-primary);
+}
+
+.deck-root-v3 .v2-crumb-task,
+.deck-root-v3 .v2-crumb-section {
+  color: var(--sre-base-content);
+}
+
+.deck-root-v3 .v2-crumb-course,
+.deck-root-v3 .v2-crumb-count {
+  color: rgba(2, 98, 98, 0.68);
+}
+
+.deck-root-v3 .v2-crumb-roman,
+.deck-root-v3 .v2-crumb-count-now {
+  color: var(--sre-primary);
+}
+
+.deck-root-v3 .v2-right {
+  border-left: 2px solid rgba(8, 132, 132, 0.22);
+  box-shadow: -18px 0 34px -32px rgba(2, 98, 98, 0.55);
+}
+
+.deck-root-v3 .v2-right-tabs {
+  border-bottom: 1px solid rgba(200, 245, 255, 0.16);
+}
+
+.deck-root-v3 .v2-tab {
+  border-bottom-width: 3px;
+}
+
+.deck-root-v3 .v2-tab-build.v2-tab-on,
+.deck-root-v3 .v2-tab-tutor.v2-tab-on {
+  border-bottom-color: var(--sre-accent);
+}
+
+.deck-root-v3 .v2-tab-dot,
+.deck-root-v3 .bp-focus-dot {
+  background: var(--sre-accent);
+  box-shadow: 0 0 0 0 rgba(103, 221, 222, 0.5);
+}
+
+.deck-root-v3 .v2-kicker-icon {
+  border-radius: 10px;
+  color: var(--sre-primary);
+  background: rgba(103, 221, 222, 0.22);
+}
+
+.deck-root-v3 .card-gotcha {
+  border-color: rgba(255, 136, 99, 0.52) !important;
+  box-shadow:
+    inset 0 4px 0 0 var(--sre-error),
+    var(--sre-shadow-lg);
+}
+
+.deck-root-v3 .v2-ask-boots {
+  border: 2px solid rgba(8, 132, 132, 0.22);
+  background: rgba(200, 245, 255, 0.34);
+  color: var(--sre-base-content);
+}
+
+.deck-root-v3 .v2-ask-boots:hover {
+  border-color: var(--sre-primary);
+  background: rgba(103, 221, 222, 0.26);
+  color: var(--sre-primary);
+}
+
+/* drop the editorial drop-cap from the literary base deck — it reads bookish and
+   fights the clean, playful SRE voice. Reset the first letter to normal flow. */
+.deck-root-v3 .rich-body .rich-p:first-child::first-letter {
+  font-family: var(--sre-font-sans);
+  color: var(--sre-base-content);
+  font-size: inherit;
+  line-height: inherit;
+  float: none;
+  padding: 0;
+  font-weight: inherit;
+}
+
+.deck-root-v3 .rich-p,
+.deck-root-v3 .rx-intro,
+.deck-root-v3 .rx-verdict {
+  color: var(--sre-base-content);
+}
+
+.deck-root-v3 .rich-code {
+  background: rgba(200, 245, 255, 0.62);
+  color: var(--sre-primary);
+}
+
+.deck-root-v3 .deck-input {
+  border: 2px solid rgba(8, 132, 132, 0.18);
+  border-left: 3px solid var(--sre-primary);
+  border-radius: 8px;
+  background: #f9feff;
+  color: var(--sre-base-content);
+}
+
+.deck-root-v3 .deck-input:focus {
+  border-left-color: var(--sre-primary);
+  box-shadow: 0 0 0 4px rgba(103, 221, 222, 0.28);
+}
+
+.deck-root-v3 .codeblock,
+.deck-root-v3 .bp-code,
+.deck-root-v3 .deck-code-input .cm-editor,
+.deck-root-v3 .wb-editor-body,
+.deck-root-v3 .wb-editor-body .cm-editor {
+  border-color: rgba(200, 245, 255, 0.16);
+  background: #163840;
+}
+
+.deck-root-v3 .deck-code-input,
+.deck-root-v3 .wb-editor-wrap {
+  border-color: rgba(8, 132, 132, 0.28);
+  border-left-color: var(--sre-primary);
+  box-shadow: var(--sre-shadow-md);
+}
+
+.deck-root-v3 .dci-head,
+.deck-root-v3 .wb-editor-head {
+  background: #026262;
+  border-bottom-color: rgba(200, 245, 255, 0.12);
+}
+
+/* the editor-tab signals were teal-on-teal (--saffron resolves to --sre-primary,
+   sitting on the deep-teal header) — invisible. Anchor them on the aqua accent,
+   which reads in both themes, and fatten the left edge so the box looks like a
+   field. */
+.deck-root-v3 .dci-pencil,
+.deck-root-v3 .deck-code-input:focus-within .dci-pencil,
+.deck-root-v3 .dci-hint,
+.deck-root-v3 .deck-code-input:focus-within .dci-hint {
+  color: var(--sre-accent);
+}
+.deck-root-v3 .dci-hint {
+  background: rgba(103, 221, 222, 0.18);
+}
+.deck-root-v3 .dci-label {
+  color: rgba(233, 251, 255, 0.82);
+}
+.deck-root-v3 .deck-code-input {
+  border-left-width: 3px;
+}
+.deck-root-v3 .deck-code-input .cm-placeholder {
+  color: rgba(200, 245, 255, 0.52);
+}
+
+.deck-root-v3 .bp-line.bp-focus,
+.deck-root-v3 .cm-focus-rule {
+  background: rgba(103, 221, 222, 0.12);
+  box-shadow: inset 3px 0 0 var(--sre-accent);
+}
+
+.deck-root-v3 .bp-stub {
+  color: rgba(233, 251, 255, 0.74);
+  border-color: rgba(200, 245, 255, 0.28);
+  background: rgba(200, 245, 255, 0.08);
+}
+
+.deck-root-v3 .lab-bubble-boots,
+.deck-root-v3 .lab-hint-btn,
+.deck-root-v3 .lab-ask-input,
+.deck-root-v3 .rx-result,
+.deck-root-v3 .lab-ledger {
+  border-color: rgba(8, 132, 132, 0.18);
+  background: #f9feff;
+}
+
+/* the in-card live ledger box (try-it cards) — was a hardcoded cream surface that
+   stayed light in dark mode; a theme-aware near-white / translucent-teal panel */
+.deck-root-v3 .v3-ledger {
+  background: #f9feff;
+}
+
+.deck-root-v3 .lab-bubble-boots {
+  color: var(--sre-base-content);
+}
+
+.deck-root-v3 .lab-bubble-you {
+  border-color: rgba(8, 132, 132, 0.28);
+  background: rgba(103, 221, 222, 0.22);
+  color: var(--sre-base-content);
+}
+
+.deck-root-v3 .rx-run-bad {
+  background: var(--sre-error);
+  border-color: var(--sre-error);
+}
+
+.deck-root-v3 .rx-run-good {
+  background: var(--sre-primary);
+  border-color: var(--sre-primary);
+}
+
+[data-theme="dark"] .deck-root-v3 .jp,
+[data-theme="dark"] .deck-root-v3 .v2-right,
+[data-theme="dark"] .deck-root-v3 .peek-sheet {
+  background: #088484;
+  border-color: rgba(200, 245, 255, 0.24);
+}
+
+/* in light mode these rail/panel titles are white via --sre-base-100; in dark mode
+   --sre-base-100 becomes #088484 = the dark rail color, so they'd disappear. Pin
+   them to the pale text token on the dark theme. */
+[data-theme="dark"] .deck-root-v3 .jp-title,
+[data-theme="dark"] .deck-root-v3 .jp-chapter-title,
+[data-theme="dark"] .deck-root-v3 .jp-row-current .jp-name,
+[data-theme="dark"] .deck-root-v3 .bp-file,
+[data-theme="dark"] .deck-root-v3 .peek-file-name {
+  color: var(--sre-base-content);
+}
+
+[data-theme="dark"] .deck-root-v3 .deck-shell-v2 .jp-chapter-active .jp-chapter-title {
+  color: var(--sre-base-content);
+}
+
+[data-theme="dark"] .deck-root-v3 .v2-crumb {
+  border-color: rgba(200, 245, 255, 0.28);
+  background: rgba(200, 245, 255, 0.08);
+  box-shadow: 0 4px 14px -8px rgba(0, 0, 0, 0.6);
+}
+
+[data-theme="dark"] .deck-root-v3 .v2-crumb:hover {
+  border-color: rgba(200, 245, 255, 0.5);
+  background: rgba(200, 245, 255, 0.14);
+}
+
+[data-theme="dark"] .deck-root-v3 .v2-crumb-grip {
+  border: 0;
+  background: rgba(103, 221, 222, 0.16);
+  color: var(--sre-accent);
+}
+
+[data-theme="dark"] .deck-root-v3 .v2-crumb:hover .v2-crumb-grip {
+  background: rgba(103, 221, 222, 0.26);
+  color: var(--sre-accent);
+}
+
+[data-theme="dark"] .deck-root-v3 .v2-crumb-task,
+[data-theme="dark"] .deck-root-v3 .v2-crumb-section,
+[data-theme="dark"] .deck-root-v3 .rich-p,
+[data-theme="dark"] .deck-root-v3 .rx-intro,
+[data-theme="dark"] .deck-root-v3 .rx-verdict {
+  color: var(--sre-base-content);
+}
+
+[data-theme="dark"] .deck-root-v3 .v2-crumb-course,
+[data-theme="dark"] .deck-root-v3 .v2-crumb-count {
+  color: rgba(233, 251, 255, 0.66);
+}
+
+[data-theme="dark"] .deck-root-v3 .deck-btn-ghost {
+  border-color: rgba(200, 245, 255, 0.28);
+  background: rgba(200, 245, 255, 0.1);
+  color: var(--sre-base-content);
+}
+
+[data-theme="dark"] .deck-root-v3 .deck-btn-ghost:hover {
+  border-color: var(--sre-primary);
+  background: rgba(200, 245, 255, 0.16);
+}
+
+[data-theme="dark"] .deck-root-v3 .deck-input,
+[data-theme="dark"] .deck-root-v3 .lab-bubble-boots,
+[data-theme="dark"] .deck-root-v3 .lab-hint-btn,
+[data-theme="dark"] .deck-root-v3 .lab-ask-input,
+[data-theme="dark"] .deck-root-v3 .rx-result,
+[data-theme="dark"] .deck-root-v3 .lab-ledger {
+  border-color: rgba(200, 245, 255, 0.26);
+  background: rgba(2, 98, 98, 0.42);
+  color: var(--sre-base-content);
+}
+
+[data-theme="dark"] .deck-root-v3 .v3-ledger {
+  background: rgba(2, 98, 98, 0.42);
+}
+
+[data-theme="dark"] .deck-root-v3 .lab-bubble-boots,
+[data-theme="dark"] .deck-root-v3 .lab-bubble-you {
+  color: var(--sre-base-content);
+}
+
+[data-theme="dark"] .deck-root-v3 .lab-bubble-you {
+  border-color: rgba(103, 221, 222, 0.34);
+  background: rgba(103, 221, 222, 0.16);
+}
+
+[data-theme="dark"] .deck-root-v3 .rich-code {
+  background: rgba(200, 245, 255, 0.18);
+  color: var(--sre-accent);
+}
+
+@media (max-width: 1023px) {
+  .deck-root-v3 .jp {
+    background: #026262;
+  }
+
+  .deck-root-v3 .deck-nav-opener {
+    margin-top: 16px;
+    border: 2px solid rgba(8, 132, 132, 0.24);
+    background: rgba(255, 255, 255, 0.76);
+    color: var(--sre-base-content);
+  }
+}
