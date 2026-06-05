@@ -31,7 +31,15 @@ const BASIC_SETUP: BasicSetupOptions = {
   autocompletion: false,
 };
 
-export function CodeInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+export function CodeInput({
+  value,
+  onChange,
+  placeholder = "write your line here…",
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+}) {
   const theme = useMemo(
     () =>
       githubDarkInit({
@@ -54,10 +62,17 @@ export function CodeInput({ value, onChange }: { value: string; onChange: (v: st
           dark panel doesn't read as a read-only showcase like the CodeBlock does */}
       <div className="dci-head" aria-hidden>
         <span className="dci-pencil">✎</span>
-        <span className="dci-label">your line</span>
+        <span className="dci-label">write your code below</span>
         <span className="dci-hint">editable</span>
       </div>
-      <CodeMirror value={value} onChange={onChange} extensions={[solidity]} theme={theme} basicSetup={BASIC_SETUP} />
+      <CodeMirror
+        value={value}
+        onChange={onChange}
+        extensions={[solidity]}
+        theme={theme}
+        basicSetup={BASIC_SETUP}
+        placeholder={placeholder}
+      />
     </div>
   );
 }
