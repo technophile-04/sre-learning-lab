@@ -26,7 +26,9 @@ const PANEL_COLLAPSED_KEY = "deck-v2:panel-collapsed";
 // YOUR TURN / TRY IT point at slots; CODE cards point at an anchored region (so a
 // CODE card needs no inline code block — the right panel shows it, highlighted).
 function focusForCard(card: Card): BuildFocus {
-  if (card.type === "your-turn") return { slots: [card.slot] };
+  // YOUR TURN wraps the whole enclosing function (signature + braces), so the piece
+  // you write is shown in context — matching how CODE cards highlight a function
+  if (card.type === "your-turn") return { slots: [card.slot], wholeBlock: true };
   if (card.type === "try-it") return { slots: SCENARIO_DEPS[card.scenario] ?? [] };
   if (card.type === "code") return { fromAnchor: card.fromAnchor, toAnchor: card.toAnchor };
   return {};
@@ -75,7 +77,6 @@ export function DeckV2() {
   const cardIndex = useDeckStore(s => s.cardIndex);
   const next = useDeckStore(s => s.next);
   const prev = useDeckStore(s => s.prev);
-  const resetDeck = useDeckStore(s => s.resetDeck);
   const markRead = useDeckStore(s => s.markRead);
 
   const [mounted, setMounted] = useState(false);
@@ -141,11 +142,6 @@ export function DeckV2() {
     if (READ_TYPES.has(card.type)) markRead(card.id);
     next();
   };
-  const handleReset = () => {
-    if (window.confirm("Reset everything? This clears your progress, grades, and the code you've written so far.")) {
-      resetDeck();
-    }
-  };
   const ghostCount = Math.min(3, remaining);
   const progress = ((cardIndex + 1) / CARDS.length) * 100;
   const isLast = cardIndex === CARDS.length - 1;
@@ -209,14 +205,6 @@ export function DeckV2() {
                     <span className="v2-crumb-task deck-display">{card.title}</span>
                   </span>
                 </button>
-                <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
-                  <button className="deck-mono v2-topbar-link" onClick={handleReset}>
-                    reset
-                  </button>
-                  <Link href="/scenes/crowdfunding" className="deck-mono v2-topbar-link">
-                    ↩ original
-                  </Link>
-                </div>
               </div>
             )}
 

@@ -8,7 +8,6 @@
 //      out from ordinary concept cards.
 // The header is plainer too — the deck title, not a loud uppercase challenge tag
 // repeated from the top bar.
-import Link from "next/link";
 import { cardMeta, isGotcha, typeMeta } from "./card-icons";
 import { CROWDFUNDING_DECK } from "~~/lib/deck/crowdfunding-deck";
 import type { Card } from "~~/lib/deck/types";
@@ -68,13 +67,6 @@ export function JourneyPanelV2({
   const goTo = useDeckStore(s => s.goTo);
   const progress = useDeckStore(s => s.progress);
   const read = useDeckStore(s => s.read);
-  const resetDeck = useDeckStore(s => s.resetDeck);
-
-  const handleReset = () => {
-    if (window.confirm("Reset everything? This clears your progress, grades, and the code you've written so far.")) {
-      resetDeck();
-    }
-  };
 
   const cards = CROWDFUNDING_DECK.cards;
   const chapters = groupIntoChapters(cards);
@@ -201,15 +193,6 @@ export function JourneyPanelV2({
             );
           })}
         </nav>
-
-        <div className="jp-foot">
-          <button type="button" className="jp-foot-btn jp-foot-reset deck-mono" onClick={handleReset}>
-            reset
-          </button>
-          <Link href="/scenes/crowdfunding" className="jp-foot-btn deck-mono">
-            ↩ original
-          </Link>
-        </div>
       </aside>
     </>
   );

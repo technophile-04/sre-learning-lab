@@ -41,8 +41,10 @@ const YOUR_TURN_SLOTS = CROWDFUNDING_DECK.cards
   .map(c => c.slot);
 
 // what a card asks the panel to highlight: a set of slots (YOUR TURN / TRY IT) or a
-// text region between two anchors (CODE cards, which point at a function or a line)
-export type BuildFocus = { slots?: string[]; fromAnchor?: string; toAnchor?: string };
+// text region between two anchors (CODE cards, which point at a function or a line).
+// wholeBlock expands a slot to its enclosing function/modifier so the highlight wraps
+// the whole thing (signature + braces), not just the body line you fill.
+export type BuildFocus = { slots?: string[]; fromAnchor?: string; toAnchor?: string; wholeBlock?: boolean };
 
 type Seg = { text: string; slot: string | null; ghost: boolean; indent: string };
 
@@ -79,6 +81,31 @@ function fontStyleOf(fs?: number) {
   if (fs & 2) s.fontWeight = 700;
   if (fs & 4) s.textDecoration = "underline";
   return s;
+}
+
+// Given a slot's line, return the [open, close] line range of its enclosing function
+// or modifier. Returns null when the slot sits at contract level (a state variable),
+// so those tasks stay a single line instead of highlighting the whole contract.
+function enclosingFunctionBlock(lines: string[], slotLine: number): [number, number] | null {
+  let open = -1;
+  for (let i = slotLine; i >= 0; i--) {
+    const t = lines[i].trim();
+    if (t.endsWith("{")) {
+      if (/\bcontract\b/.test(t)) return null;
+      open = i;
+      break;
+    }
+  }
+  if (open === -1) return null;
+  let depth = 0;
+  for (let i = open; i < lines.length; i++) {
+    for (const ch of lines[i]) {
+      if (ch === "{") depth++;
+      else if (ch === "}") depth--;
+    }
+    if (depth === 0) return [open, i];
+  }
+  return null;
 }
 
 // Centre a line inside the code container WITHOUT moving the page. el.scrollIntoView()
@@ -118,9 +145,21 @@ export function BuildPanel({ focus }: { focus?: BuildFocus }) {
     const set = new Set<number>();
     if (focus?.slots?.length) {
       const want = new Set(focus.slots);
+      const slotIdx: number[] = [];
       segs.forEach((s, i) => {
-        if (s.slot && want.has(s.slot)) set.add(i);
+        if (s.slot && want.has(s.slot)) {
+          set.add(i);
+          slotIdx.push(i);
+        }
       });
+      // expand each slot to its enclosing function so the highlight wraps the whole
+      // thing (state-variable slots return null and stay a single line)
+      if (focus.wholeBlock) {
+        for (const idx of slotIdx) {
+          const block = enclosingFunctionBlock(lines, idx);
+          if (block) for (let i = block[0]; i <= block[1]; i++) set.add(i);
+        }
+      }
     } else if (focus?.fromAnchor) {
       const from = lines.findIndex(l => l.includes(focus.fromAnchor!));
       if (from !== -1) {
@@ -271,7 +310,11 @@ export function BuildPanel({ focus }: { focus?: BuildFocus }) {
         )}
       </div>
 
-      <div className={`bp-code deck-mono ${focusOn ? "bp-has-focus" : ""}`} ref={codeRef} onClick={onCodeClick}>
+      <div
+        className={`bp-code deck-mono ${focusOn ? "bp-has-focus" : ""} ${!hasFocus ? "bp-dimmed" : ""}`}
+        ref={codeRef}
+        onClick={onCodeClick}
+      >
         <pre>
           {lines.map((line, i) => {
             const seg = segs[i];

@@ -202,9 +202,14 @@ function Code({ card }: { card: CodeCard }) {
       <div className="rich-body">
         <Rich text={card.note} />
       </div>
-      <p className="v2-code-pointer deck-mono">
-        <span aria-hidden>☞</span> highlighted in <strong>{card.file}</strong>, on the right
-      </p>
+      {/* a quiet line pointing to the contract panel (which already has the region
+          highlighted); clicking it re-pulses the panel glow */}
+      <button type="button" className="v2-code-note deck-mono" onClick={() => bus.open("build")}>
+        <span className="v2-code-note-arrow" aria-hidden>
+          ↳
+        </span>
+        highlighted in <span className="v2-code-note-file">{card.file}</span>
+      </button>
       <div className="v2-code-inline">
         <CodeBlock source={sources[card.file]} fromAnchor={card.fromAnchor} toAnchor={card.toAnchor} />
       </div>
