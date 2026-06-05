@@ -483,6 +483,11 @@
 .bp-code pre {
   margin: 0;
   white-space: pre;
+  /* size to the longest line (but never narrower than the panel) so each line box —
+     and its focus highlight — runs the full width instead of cutting off at the
+     visible edge when the code scrolls horizontally */
+  width: max-content;
+  min-width: 100%;
 }
 .bp-line {
   position: relative;
@@ -566,6 +571,20 @@
   transition:
     background 320ms ease,
     opacity 320ms ease;
+}
+/* a multi-line focus should read as ONE block, not a stack of separate pills. The
+   inset left bar is already continuous across contiguous lines; square every line's
+   corners and round only the group's first (top) and last (bottom) line. */
+.bp-line.bp-focus {
+  border-radius: 0;
+}
+.bp-line.bp-focus.bp-focus-first {
+  border-top-left-radius: 6px;
+  border-top-right-radius: 6px;
+}
+.bp-line.bp-focus.bp-focus-last {
+  border-bottom-left-radius: 6px;
+  border-bottom-right-radius: 6px;
 }
 /* cards with no piece to point at (IDEA / THINK / RECAP): the contract is ambient
    context, not the thing to look at, so the whole thing recedes */

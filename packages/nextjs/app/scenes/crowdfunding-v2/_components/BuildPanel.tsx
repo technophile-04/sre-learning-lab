@@ -322,13 +322,17 @@ export function BuildPanel({ focus }: { focus?: BuildFocus }) {
             const ghost = seg?.ghost ?? false;
             const isInking = slot && !ghost ? inking.has(slot) : false;
             const isFocus = focusOn && focusLines.has(i);
+            // first/last line of a contiguous focus run, so the highlight rounds only
+            // at the group's top and bottom and reads as one block
+            const isFocusFirst = isFocus && !focusLines.has(i - 1);
+            const isFocusLast = isFocus && !focusLines.has(i + 1);
             const lineToks = tokens?.[i];
             // cascade: each line of a freshly-filled slot inks in a beat after the last
             const inkDelay = isInking && slot ? (i - (slotFirstLine[slot] ?? i)) * 80 : 0;
             return (
               <div
                 key={i}
-                className={`bp-line ${isInking ? "bp-inking" : ""} ${isFocus ? "bp-focus" : ""}`}
+                className={`bp-line ${isInking ? "bp-inking" : ""} ${isFocus ? "bp-focus" : ""} ${isFocusFirst ? "bp-focus-first" : ""} ${isFocusLast ? "bp-focus-last" : ""}`}
                 style={isInking ? ({ "--ink-delay": `${inkDelay}ms` } as React.CSSProperties) : undefined}
               >
                 <span className="bp-ln">{String(i + 1).padStart(2, " ")}</span>
